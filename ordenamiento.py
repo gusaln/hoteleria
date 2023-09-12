@@ -2,11 +2,12 @@ from collections import namedtuple
 from typing import List
 
 # Representa un par ordenable, donde `data` es el `valor` y key es la clave de ordenamiento
-Ordenable = namedtuple('Ordenable', ['data', 'key'])
+Ordenable = namedtuple("Ordenable", ["data", "key"])
+
 
 def quicksort(arr: List[Ordenable], lo=0, hi=None):
     """Implementa quicksort recursivamente.
-    
+
     Se modifica al arreglo para mejor rendimiento.
     """
     if hi is None:
@@ -26,8 +27,8 @@ def quicksort(arr: List[Ordenable], lo=0, hi=None):
 
 def quicksort_particionar(arr: List[Ordenable], lo, hi):
     """Función de partición de quicksort.
-    
-    Toma a `arr[hi]` como pivote y en el rango [:param:`lo`, :param:`hi`] mueve todos los elementos menores al pivote a 
+
+    Toma a `arr[hi]` como pivote y en el rango [:param:`lo`, :param:`hi`] mueve todos los elementos menores al pivote a
     la izquierda y todos los elementos mayores a la derecha.
 
     :param arr: arreglo a ordenar
@@ -53,13 +54,13 @@ def quicksort_particionar(arr: List[Ordenable], lo, hi):
 
 def heapsort(arr: List[Ordenable]):
     """Implementa heapsort.
-    
+
     Se modifica al arreglo para mejor rendimiento.
 
     :param arr: arreglo a ordenar
     """
     heap_size = len(arr)
-    
+
     # Construimos un max heap. Al construir el heap, el valor en la raíz 0, es el mayor.
     for k in range((heap_size // 2), -1, -1):
         heapsort_max_heapify(arr, heap_size, k)
@@ -68,7 +69,7 @@ def heapsort(arr: List[Ordenable]):
     for k in range(heap_size - 1, 0, -1):
         # Intercambiamos la raíz con el primer elementos.
         arr[0], arr[k] = arr[k], arr[0]
-    
+
         # Dado que el arreglo se ordena en su sitio, debemos especificar hasta donde llega el heap.
         # k = heap_size - 1, por lo que al usarla como heap_size, el algoritmo ignorará los elementos ya ordenados
         heapsort_max_heapify(arr, k, 0)
@@ -77,7 +78,7 @@ def heapsort(arr: List[Ordenable]):
 def heapsort_max_heapify(heap: List[Ordenable], heap_size, i):
     """Ordena un max heap.
 
-    
+
     :param heap: que representa al heap
     :param heap_size: el tamaño del :param:`heap`
     :param i: índice de la raíz del :param:`heap`
@@ -100,13 +101,13 @@ def heapsort_max_heapify(heap: List[Ordenable], heap_size, i):
 
 def mergesort(arr: List[Ordenable]):
     """Implementa mergesort recursivamente.
-    
+
     :param arr: arreglo a ordenar
     """
-    if len(arr) == 0:
+    if len(arr) < 2:
         return
 
-    mitad = len(arr)//2
+    mitad = len(arr) // 2
     arr_izq = arr[:mitad]
     arr_der = arr[mitad:]
 
@@ -118,7 +119,7 @@ def mergesort(arr: List[Ordenable]):
     arr_izq_len = len(arr_izq)
     arr_der_len = len(arr_der)
 
-    # Reinsertamos los elementos de cada subarreglo ordenados en el arreglo principal hasta que se acabe uno de los 
+    # Reinsertamos los elementos de cada subarreglo ordenados en el arreglo principal hasta que se acabe uno de los
     # subarreglos
     while cursor_izq < arr_izq_len and cursor_der < arr_der_len:
         if arr_izq[cursor_izq].key < arr_der[cursor_der].key:
