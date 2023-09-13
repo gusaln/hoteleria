@@ -26,31 +26,8 @@ def print_seccion(*seccion):
 
 def print_info(*info):
     """Imprime información"""
-    print("  .", *info)
 
-
-def revisar_caracteres(palabra):
-    """Valida que una palabra solo contenga caracteres alfanuméricos y ciertos símbolos"""
-    for letra in palabra:
-        if letra in [
-            ":",
-            ";",
-            "{",
-            "}",
-            "[",
-            "]",
-            "?",
-            "!",
-            "/",
-            "<",
-            ">",
-            "=",
-            "+",
-            "_",
-        ]:
-            print("Solo se pueden leer valores alfanuméricos, intente de nuevo")
-            return True
-    return False
+    print("-->", *info)
 
 
 def leer_str(mensaje=None, prompt="> "):
@@ -64,10 +41,7 @@ def leer_str(mensaje=None, prompt="> "):
     if not prompt.endswith("> "):
         prompt = prompt + "> "
 
-    res = input(prompt).strip()
-    while revisar_caracteres(res):
-        res = input(prompt).strip()
-    return res
+    return input(prompt).strip()
 
 
 def leer_numero(mensaje=None, predeterminado=None):
@@ -121,7 +95,7 @@ def seleccionar_opcion(mensaje: str, opciones, valores=[]):
 def print_tabla_reservaciones(reservaciones: List[Reservacion]):
     """Imprime una tabla con las reservaciones"""
 
-    fmt = "{id: <8}  {cliente_ci: <8}  {habitacion: <4}  {estado: <9}  {fecha_entrada: <10}  {fecha_salida: <10}  {precio: >6}  {personas_count: ^13}  {observaciones}"
+    fmt = "{id: <8}  {cliente_ci: <8}  {habitacion: <4}  {estado: <9}  {fecha_entrada: <10}  {fecha_salida: <10}  {duracion: <8}  {precio: >6}  {personas_count: ^13}  {observaciones}"
     print(
         fmt.format(
             id="ID",
@@ -129,6 +103,7 @@ def print_tabla_reservaciones(reservaciones: List[Reservacion]):
             habitacion="Hab.",
             fecha_entrada="F. Entrada",
             fecha_salida="F. Salida",
+            duracion="Duración",
             estado="Estado",
             precio="Precio",
             personas_count="# de personas",
@@ -143,17 +118,21 @@ def print_tabla_reservaciones(reservaciones: List[Reservacion]):
                 habitacion=r.habitacion,
                 fecha_entrada=r.fecha_entrada.strftime("%d/%m/%Y"),
                 fecha_salida=r.fecha_salida.strftime("%d/%m/%Y"),
+                duracion=r.duracion(),
                 estado=r.estado,
                 precio=r.precio,
                 personas_count=r.personas_count,
                 observaciones=r.observaciones or "-",
             )
         )
+    print()
 
 
 def leer_date(mensaje: str):
     while True:
         try:
-            return datetime.datetime.strptime(leer_str(mensaje), "%d/%m/%Y")
+            return datetime.datetime.strptime(
+                leer_str(mensaje + " (formato dd/mm/aaaa)"), "%d/%m/%Y"
+            )
         except ValueError:
             print_error("Debe indicar una fecha en el formato dd/mm/aaaa")
