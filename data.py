@@ -12,6 +12,15 @@ class HabitacionTipo(StrEnum):
     Triple = "triple"
     Suite = "suite"
 
+    def label(self):
+        return {
+            HabitacionTipo.Doble: "Doble",
+            HabitacionTipo.Matrimonial: "Matrimonial",
+            HabitacionTipo.MatrimonialDeluxe: "Matrimonial Deluxe",
+            HabitacionTipo.Triple: "Triple",
+            HabitacionTipo.Suite: "Suite",
+        }[self]
+
     def capacidad(self):
         return {
             HabitacionTipo.Doble: 2,

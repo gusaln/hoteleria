@@ -2,7 +2,8 @@ import datetime
 import os
 from typing import List, Dict
 from config import CURRENT_DIR
-from data import Cliente, MejorCliente, Reservacion, ReservacionEstado
+from data import Cliente, HabitacionTipo, MejorCliente, Reservacion, ReservacionEstado
+import csv
 
 from ordenamiento import Ordenable, heapsort, mergesort, quicksort, shellsort
 from term import *
@@ -35,8 +36,8 @@ class App:
     def __init__(
         self,
         hotel: str,
-        habitaciones={},
-        precios={},
+        habitaciones: Dict[str, str] = {},
+        precios: Dict[str, float] = {},
         clientes: Dict[str, Cliente] = {},
         reservaciones: List[Reservacion] = [],
     ):
@@ -62,8 +63,13 @@ class App:
             clientes_file_path = os.path.join(CURRENT_DIR, "seeds", "clientes.csv")
 
         with open(clientes_file_path) as fp:
-            for l in fp.readlines():
-                id, nombre, email = l.strip().split(",")
+            for row in csv.reader(
+                fp.readlines(),
+                delimiter=";",
+                lineterminator="\n",
+                quoting=csv.QUOTE_MINIMAL,
+            ):
+                id, nombre, email = row
                 self.clientes[id] = Cliente(id, nombre, email)
 
         reservaciones_file_path = os.path.join(CURRENT_DIR, "data", "reservaciones.csv")
@@ -73,7 +79,12 @@ class App:
             )
 
         with open(reservaciones_file_path) as fp:
-            for l in fp.readlines():
+            for row in csv.reader(
+                fp.readlines(),
+                delimiter=";",
+                lineterminator="\n",
+                quoting=csv.QUOTE_MINIMAL,
+            ):
                 (
                     id,
                     cliente_ci,
@@ -86,7 +97,7 @@ class App:
                     precio,
                     personas_count,
                     observaciones,
-                ) = l.strip().split(",")
+                ) = row
                 fecha_entrada = datetime.datetime.strptime(fecha_entrada, "%Y-%m-%d")
                 fecha_salida = datetime.datetime.strptime(fecha_salida, "%Y-%m-%d")
                 hora_entrada = datetime.datetime.strptime(hora_entrada, "%H:%M").time()
@@ -119,10 +130,16 @@ class App:
         clientes_file_path = os.path.join(CURRENT_DIR, "data", "clientes.csv")
         reservaciones_file_path = os.path.join(CURRENT_DIR, "data", "reservaciones.csv")
         with open(clientes_file_path, "w") as fp:
+            csvwriter = csv.writer(
+                fp, delimiter=";", lineterminator="\n", quoting=csv.QUOTE_MINIMAL
+            )
             for id, cliente in self.clientes.items():
-                fp.write(f"{id},{cliente.nombre},{cliente.email}\n")
+                csvwriter.writerow((id, cliente.nombre, cliente.email))
 
         with open(reservaciones_file_path, "w") as fp:
+            csvwriter = csv.writer(
+                fp, delimiter=";", lineterminator="\n", quoting=csv.QUOTE_MINIMAL
+            )
             for reservacion in self.reservaciones:
                 id = reservacion.id
                 cliente_ci = reservacion.cliente.ci
@@ -135,8 +152,20 @@ class App:
                 precio = reservacion.precio
                 personas_count = reservacion.personas_count
                 observaciones = reservacion.observaciones
-                fp.write(
-                    f"{id},{cliente_ci},{habitacion},{estado},{fecha_entrada},{fecha_salida},{hora_entrada},{hora_salida},{precio},{personas_count},{observaciones}\n"
+                csvwriter.writerow(
+                    (
+                        id,
+                        cliente_ci,
+                        habitacion,
+                        estado,
+                        fecha_entrada,
+                        fecha_salida,
+                        hora_entrada,
+                        hora_salida,
+                        precio,
+                        personas_count,
+                        observaciones,
+                    )
                 )
 
         print_info("Datos guardados")
@@ -159,6 +188,13 @@ class App:
 
         return len(reservaciones)
 
+    def capacidad(self, habitacion: str) -> int:
+        """Devuelve la capacidad de la habitación."""
+        if not self.tiene_habitacion(habitacion):
+            return 0
+
+        return HabitacionTipo(self.habitaciones[habitacion]).capacidad()
+
     def tiene_habitacion(self, habitacion: str):
         """Devuelve si la habitación existe."""
         return habitacion in self.habitaciones
@@ -175,8 +211,7 @@ class App:
         """Devuelve las reservaciones que se encuentran en el rango de fechas."""
 
         return filter(
-            lambda r: r.fecha_entrada >= fecha_inicial
-            and r.fecha_salida <= fecha_final,
+            lambda r: r.fecha_entrada < fecha_final and r.fecha_salida > fecha_inicial,
             self.reservaciones,
         )
 
@@ -260,7 +295,7 @@ class App:
         hora_salida: datetime.time = None,
         personas_count=1,
         observaciones=None,
-    ):
+    ) -> Reservacion:
         precio_por_dia = self.precios[self.habitaciones[habitacion]]
         duracion_dias = (fecha_salida - fecha_entrada).days
         precio = precio_por_dia * duracion_dias
@@ -287,10 +322,11 @@ class App:
 
     VISTA_SALIR = -1
     VISTA_MENU = 0
-    VISTA_LISTAR = 1
-    VISTA_REPORTE_DEL_PERIODO = 2
-    VISTA_REPORTE_MEJORES_CLIENTES = 3
-    VISTA_REPORTE_DURACION = 4
+    VISTA_RESERVAR = 1
+    VISTA_LISTAR = 2
+    VISTA_REPORTE_DEL_PERIODO = 3
+    VISTA_REPORTE_MEJORES_CLIENTES = 4
+    VISTA_REPORTE_DURACION = 5
 
     def run(self):
         """Ejecuta el TUI de la aplicación"""
@@ -308,6 +344,9 @@ class App:
 
             elif vista == self.VISTA_LISTAR:
                 vista = self.vista_listar_reservaciones(vista)
+
+            elif vista == self.VISTA_RESERVAR:
+                vista = self.vista_reservar(vista)
 
             elif vista == self.VISTA_REPORTE_DEL_PERIODO:
                 vista = self.vista_reporte_del_periodo(vista)
@@ -329,7 +368,7 @@ class App:
         print_seccion(self.hotel + " - Menú")
 
         opciones = [
-            # ["Reservar", self.vista_reservar],
+            ["Reservar", self.VISTA_RESERVAR],
             ["Ver reservaciones", self.VISTA_LISTAR],
             [
                 "Reporte: reservaciones en período",
@@ -349,7 +388,92 @@ class App:
         return vista or self.VISTA_MENU
 
     def vista_reservar(self, vista=None):
-        pass
+        """Muestra la vista de reservar"""
+        print_seccion(self.hotel + " - Reservar")
+
+        fecha_inicial = leer_date("Indique la fecha en la que desea llegar")
+        fecha_final = leer_date("Indique la fecha en la que desea salir")
+        personas_count = leer_numero("Indique el número de personas que se quedarán", 1)
+
+        reservaciones_del_periodo = set(
+            r.habitacion
+            for r in self.get_reservaciones_por_periodo(fecha_inicial, fecha_final)
+        )
+        tipos_utiles = [t for t in HabitacionTipo if t.capacidad() >= personas_count]
+
+        habitaciones_disponibles = []
+        for h, tipo in self.habitaciones.items():
+            if h not in reservaciones_del_periodo and tipo in tipos_utiles:
+                habitaciones_disponibles.append(h)
+
+        if len(habitaciones_disponibles) < 0:
+            print_info(
+                "No tenemos habitaciones disponibles en ese período para esa cantidad de personas"
+            )
+            return self.VISTA_MENU
+
+        print_info("Tenemos habitaciones disponibles")
+        for tipo, precio in self.precios.items():
+            if tipo not in tipos_utiles:
+                continue
+            print(f"  - {HabitacionTipo(tipo).label()} en {precio}")
+
+        if not leer_si_no(
+            "¿Desa proceder con la reservación con alguna de estas opciones?"
+        ):
+            return self.VISTA_MENU
+
+        tipo_seleccionado = seleccionar_opcion(
+            "Indique el tipo de habitación",
+            [HabitacionTipo(tipo).label() for tipo in tipos_utiles],
+            tipos_utiles,
+        )
+
+        duracion_dias = (fecha_final - fecha_inicial).days
+        precio = duracion_dias * self.precios[tipo_seleccionado]
+
+        habitacion = None
+        for h in habitaciones_disponibles:
+            if self.tipo_habitacion(h) == tipo_seleccionado:
+                habitacion = h
+                break
+
+        if not leer_si_no(
+            f"Sería un total de {precio} por la habitación {habitacion} por {duracion_dias} día(s) ¿Desa proceder?"
+        ):
+            return vista or self.VISTA_MENU
+
+        ci = "{:0>8}".format(leer_numero("Indique la C.I. del cliente"))
+        if ci in self.clientes:
+            print_info("Este cliente ya está registrado.")
+            print_info(self.clientes[ci].nombre)
+        else:
+            print_info("Este cliente no esta registrado. Vamos a solucionarlo.")
+            nombre = leer_str("¿Cuál es el nombre del cliente?")
+            email = leer_email("¿Cuál es el email del cliente?")
+
+            self.clientes[ci] = Cliente(ci, nombre, email)
+            print_info("Cliente registrado.")
+
+        observaciones = leer_str(
+            "¿Alguna observación sobre de la reservación? (presione <enter> para dejar el campo vacío)"
+        )
+        if observaciones == "":
+            observaciones = None
+
+        reservacion = self.crear_reservacion(
+            ci,
+            habitacion,
+            fecha_inicial,
+            fecha_final,
+            personas_count=personas_count,
+            observaciones=observaciones,
+        )
+
+        print_info("Reservación registrada")
+        print(reservacion)
+
+        return self.VISTA_MENU
 
     def format_ordenamiento(self):
         """Formatea el ordenamiento"""

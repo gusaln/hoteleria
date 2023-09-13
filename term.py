@@ -2,6 +2,7 @@ import datetime
 from typing import List
 
 from data import Cliente, MejorCliente, Reservacion
+import re
 
 
 def print_error(m):
@@ -42,6 +43,21 @@ def leer_str(mensaje=None, prompt="> "):
         prompt = prompt + "> "
 
     return input(prompt).strip()
+
+
+email_pattern = re.compile(
+    "^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$"
+)
+
+
+def leer_email(mensaje=None):
+    """Lee un email"""
+    while True:
+        email = leer_str(mensaje)
+        if email_pattern.match(email):
+            return email
+
+        print_error("Email inválido")
 
 
 def leer_numero(mensaje=None, predeterminado=None):
@@ -95,7 +111,7 @@ def seleccionar_opcion(mensaje: str, opciones, valores=[]):
 def print_tabla_reservaciones(reservaciones: List[Reservacion]):
     """Imprime una tabla con las reservaciones"""
 
-    fmt = "{id: <8}  {cliente_ci: <8}  {habitacion: <4}  {estado: <9}  {fecha_entrada: <10}  {fecha_salida: <10}  {duracion: <8}  {precio: >6}  {personas_count: ^13}  {observaciones}"
+    fmt = "{id: <13}  {cliente_ci: <8}  {habitacion: <4}  {estado: <9}  {fecha_entrada: <10}  {fecha_salida: <10}  {duracion: <8}  {precio: >6}  {personas_count: ^13}  {observaciones}"
     print(
         fmt.format(
             id="ID",
