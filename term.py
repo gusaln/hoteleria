@@ -1,7 +1,7 @@
 import datetime
 from typing import List
 
-from data import Reservacion
+from data import Cliente, MejorCliente, Reservacion
 
 
 def print_error(m):
@@ -59,7 +59,7 @@ def leer_numero(mensaje=None, predeterminado=None):
 
 
 def leer_si_no(mensaje):
-    """Lee un bolean"""
+    """Lee un boolean"""
     print(mensaje)
 
     return leer_str(prompt="['s' para sí / 'n' para no]").lower() == "s"
@@ -128,7 +128,31 @@ def print_tabla_reservaciones(reservaciones: List[Reservacion]):
     print()
 
 
+def print_tabla_mejores_clientes(clientes: List[MejorCliente]):
+    """Imprime una tabla con los clientes"""
+
+    fmt = "{ci: <8}  {nombre: <24}  {count: <3}"
+    print(
+        fmt.format(
+            ci="C.I.",
+            nombre="Nombre",
+            email="Email",
+            count="# Reservaciones",
+        ),
+    )
+    for cliente, count in clientes:
+        print(
+            fmt.format(
+                ci=cliente.ci,
+                nombre=cliente.nombre,
+                count=count,
+            )
+        )
+    print()
+
+
 def leer_date(mensaje: str):
+    """Lee una fecha"""
     while True:
         try:
             return datetime.datetime.strptime(

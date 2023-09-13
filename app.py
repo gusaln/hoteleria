@@ -2,10 +2,27 @@ import datetime
 import os
 from typing import List, Dict
 from config import CURRENT_DIR
-from data import Cliente, Reservacion, ReservacionEstado
+from data import Cliente, MejorCliente, Reservacion, ReservacionEstado
 
-from ordenamiento import Ordenable, heapsort, mergesort, shellsort
+from ordenamiento import Ordenable, heapsort, mergesort, quicksort, shellsort
 from term import *
+
+
+PARAMETROS_ORDEN = dict(
+    (i + 1, p)
+    for i, p in enumerate(
+        (
+            ["F. de entrada", lambda r: r.fecha_entrada],
+            ["F. de salida", lambda r: r.fecha_salida],
+            ["Estado", lambda r: r.estado],
+            ["Habitación", lambda r: r.habitacion],
+            ["Duración estadía", lambda r: r.duracion()],
+            ["Precio", lambda r: r.precio],
+            ["# personas", lambda r: r.personas_count],
+            ["ID", lambda r: r.id],
+        )
+    )
+)
 
 
 class App:
@@ -28,13 +45,17 @@ class App:
         self.precios = precios
         self.clientes = clientes
         self.reservaciones = reservaciones
-        self.ordenamiento = []
+        self.ordenamiento = [1]
+
+    ## Métodos de I.O.
 
     def cargar(self):
         """Carga los datos del sistema.
 
         De no haber datos, se utilizan cargan los datos de muestra como valores iniciales.
         """
+
+        print_info("Cargando archivos de datos")
 
         clientes_file_path = os.path.join(CURRENT_DIR, "data", "clientes.csv")
         if not os.path.exists(clientes_file_path):
@@ -66,14 +87,12 @@ class App:
                     personas_count,
                     observaciones,
                 ) = l.strip().split(",")
-                fecha_entrada = datetime.datetime.strptime(
-                    fecha_entrada, "%Y-%m-%d"
-                ).date()
-                fecha_salida = datetime.datetime.strptime(
-                    fecha_salida, "%Y-%m-%d"
-                ).date()
+                fecha_entrada = datetime.datetime.strptime(fecha_entrada, "%Y-%m-%d")
+                fecha_salida = datetime.datetime.strptime(fecha_salida, "%Y-%m-%d")
                 hora_entrada = datetime.datetime.strptime(hora_entrada, "%H:%M").time()
                 hora_salida = datetime.datetime.strptime(hora_salida, "%H:%M").time()
+                precio = float(precio)
+
                 self.reservaciones.append(
                     Reservacion(
                         self.clientes[cliente_ci],
@@ -90,8 +109,12 @@ class App:
                     )
                 )
 
+        print_info("Datos cargados")
+
     def persistir(self):
         """Persiste el estado actual del sistema"""
+
+        print_info("Guardando datos")
 
         clientes_file_path = os.path.join(CURRENT_DIR, "data", "clientes.csv")
         reservaciones_file_path = os.path.join(CURRENT_DIR, "data", "reservaciones.csv")
@@ -116,12 +139,17 @@ class App:
                     f"{id},{cliente_ci},{habitacion},{estado},{fecha_entrada},{fecha_salida},{hora_entrada},{hora_salida},{precio},{personas_count},{observaciones}\n"
                 )
 
+        print_info("Datos guardados")
+
+    ## Operaciones de la App
+
     def esta_ocupada(
         self,
         habitacion: str,
         fecha_inicial: datetime.datetime,
         fecha_final: datetime.datetime,
     ):
+        """Devuelve si la habitación está ocupada en el rango de fechas."""
         reservaciones = filter(lambda r: r.habitacion == habitacion, self.reservaciones)
         reservaciones = filter(
             lambda r: r.fecha_entrada >= fecha_inicial
@@ -132,9 +160,11 @@ class App:
         return len(reservaciones)
 
     def tiene_habitacion(self, habitacion: str):
+        """Devuelve si la habitación existe."""
         return habitacion in self.habitaciones
 
     def tipo_habitacion(self, habitacion: str):
+        """Devuelve el tipo de la habitación."""
         if self.tiene_habitacion(habitacion):
             return self.habitaciones[habitacion]
         return None
@@ -142,6 +172,8 @@ class App:
     def get_reservaciones_por_periodo(
         self, fecha_inicial: datetime.datetime, fecha_final: datetime.datetime
     ):
+        """Devuelve las reservaciones que se encuentran en el rango de fechas."""
+
         return filter(
             lambda r: r.fecha_entrada >= fecha_inicial
             and r.fecha_salida <= fecha_final,
@@ -151,6 +183,8 @@ class App:
     def reporte_en_periodo(
         self, fecha_inicial: datetime.datetime, fecha_final: datetime.datetime, asc=True
     ):
+        """Devuelve un reporte de las reservaciones que se encuentran en el rango de fechas ordenadas por precio."""
+
         reservaciones = self.get_reservaciones_por_periodo(fecha_inicial, fecha_final)
 
         if asc:
@@ -164,6 +198,11 @@ class App:
         return [ordenable.data for ordenable in reservaciones]
 
     def reporte_cant_reservaciones(self, asc=True):
+        """Devuelve un reporte de los mejores clientes.
+
+        El criterio utilizado es la cantidad de reservaciones.
+        """
+
         clientes_count = {}
 
         for r in self.reservaciones:
@@ -175,21 +214,26 @@ class App:
         resultados = []
         if asc:
             resultados = map(
-                lambda ci, count: Ordenable(self.clientes[ci], count),
+                lambda pair: Ordenable(pair[0], pair[1]),
                 clientes_count.items(),
             )
         else:
             resultados = map(
-                lambda ci, count: Ordenable(self.clientes[ci], -count),
+                lambda pair: Ordenable(pair[0], -pair[1]),
                 clientes_count.items(),
             )
 
         resultados = list(resultados)
         shellsort(resultados)
 
-        return [ordenable.data for ordenable in resultados]
+        return [
+            MejorCliente(self.clientes[ordenable.data], clientes_count[ordenable.data])
+            for ordenable in resultados
+        ]
 
     def reporte_estadia(self, asc=True):
+        """Devuelve un reporte de las reservaciones ordenadas por duración de estadía."""
+
         reservaciones = self.reservaciones
 
         if asc:
@@ -210,8 +254,8 @@ class App:
         self,
         cliente_ci: str,
         habitacion: str,
-        fecha_entrada: datetime.date,
-        fecha_salida: datetime.date,
+        fecha_entrada: datetime.datetime,
+        fecha_salida: datetime.datetime,
         hora_entrada: datetime.time = None,
         hora_salida: datetime.time = None,
         personas_count=1,
@@ -257,7 +301,7 @@ class App:
 
         while True:
             if vista == self.VISTA_SALIR:
-                exit(0)
+                return
 
             elif vista == self.VISTA_MENU:
                 vista = self.vista_menu(vista)
@@ -293,6 +337,7 @@ class App:
             ],
             ["Reporte: mejores clientes", self.VISTA_REPORTE_MEJORES_CLIENTES],
             ["Reporte: duración de estadías", self.VISTA_REPORTE_DURACION],
+            ["Salir", self.VISTA_SALIR],
         ]
 
         vista = seleccionar_opcion(
@@ -306,39 +351,93 @@ class App:
     def vista_reservar(self, vista=None):
         pass
 
-    def vista_listar_reservaciones(self, vista=None):
-        print_seccion(self.hotel + " - Reservaciones")
+    def format_ordenamiento(self):
+        """Formatea el ordenamiento"""
+        return ", ".join(
+            ("" if o > 0 else "-") + PARAMETROS_ORDEN[abs(o)][0]
+            for o in self.ordenamiento
+        )
 
-        parametros_orden = [
-            ["F. de entrada", lambda r: r.fecha_entrada],
-            ["# Habitación", lambda r: r.habitacion],
-            ["Duración estadía", lambda r: r.duracion()],
-        ]
+    def reservaciones_ordenadas(self):
+        """Ordena las reservaciones"""
 
         ordenados = list(self.reservaciones)
-        orden_actual = [1]
-        if len(self.reservaciones) > 0:
-            for o in orden_actual:
-                getter = parametros_orden[abs(o) - 1][1]
+        if len(self.ordenamiento) > 0:
+            for ordenamiento in self.ordenamiento[::-1]:
+                getter = PARAMETROS_ORDEN[abs(ordenamiento)][1]
 
                 ordenables = [Ordenable(r, getter(r)) for r in ordenados]
-                mergesort(ordenables)
-                if o < 0:
+                quicksort(ordenables)
+                if ordenamiento < 0:
                     ordenados = [r.data for r in ordenables[::-1]]
                 else:
                     ordenados = [r.data for r in ordenables]
 
+        return ordenados
+
+    def vista_listar_reservaciones(self, vista=None):
+        """Muestra las reservaciones"""
+
+        print_seccion(self.hotel + " - Reservaciones")
+
+        def seleccionar_orden():
+            while True:
+                print_info(
+                    "Estos son los parámetros por los que puede ordenar la lista:"
+                )
+                for p in PARAMETROS_ORDEN:
+                    print(f"  - [{p}] {PARAMETROS_ORDEN[p][0]}")
+
+                print_info(
+                    "Indique el nro. de la opción para ordenar de forma ascendente y el nro. negativo para ordenar de forma descendente"
+                )
+                print_info(
+                    "Puede indicar varios valores separados por comas para ordenar por más de un parámetro de la forma '1, 2, -3'"
+                )
+                orden = leer_str(
+                    "Indique el orden o presione <enter> sin escribir nada para volver a la lista:"
+                )
+                if len(orden) == 0:
+                    return True
+
+                try:
+                    orden = [
+                        int(o) for o in filter(lambda s: len(s) > 0, orden.split(","))
+                    ]
+                except ValueError:
+                    print_error(
+                        "No se pudo procesar la entrada como parámetro de orden"
+                    )
+                    continue
+
+                self.ordenamiento = list(
+                    filter(
+                        lambda o: abs(o) in PARAMETROS_ORDEN,
+                        orden,
+                    )
+                )
+
+                print_info(
+                    "Nuevo orden:",
+                    self.format_ordenamiento(),
+                )
+
+                break
+
+            return True
+
         opciones = [
-            ["Ordenar", None],
+            ["Ordenar", seleccionar_orden],
             ["Volver al menú", lambda: False],
         ]
 
         while True:
             print_info(
-                "Orden:",
-                ", ".join(parametros_orden[abs(o) - 1][0] for o in orden_actual),
+                "Reservaciones ordenadas:",
+                self.format_ordenamiento(),
             )
-            print_tabla_reservaciones(ordenados)
+            print_tabla_reservaciones(self.reservaciones_ordenadas())
+            print()
 
             accion = seleccionar_opcion(
                 "Seleccione una operación",
@@ -347,33 +446,47 @@ class App:
             )
 
             if not accion():
-                vista = self.VISTA_MENU
-                break
+                return self.VISTA_MENU
 
         return vista or self.VISTA_LISTAR
 
     def vista_reporte_del_periodo(self, vista=None):
+        """Muestra el reporte del período"""
+
         print_seccion(self.hotel + " - Reporte del período")
         reservaciones = self.reporte_en_periodo(
-            leer_date("Ingrese fecha inicial"), leer_date("Ingrese fecha final")
+            leer_date("Ingrese fecha inicial"),
+            leer_date("Ingrese fecha final"),
+            not leer_si_no("¿Desea orden descendente?"),
         )
 
+        print()
         print_tabla_reservaciones(reservaciones)
-        print("Presione enter para volver al menú")
+        input("Presione <enter> para volver al menú > ")
 
         return self.VISTA_MENU
 
     def vista_reporte_mejores_clientes(self, vista=None):
         print_seccion(self.hotel + " - Reporte de Mejores clientes")
 
+        mejores_clientes = self.reporte_cant_reservaciones(
+            not leer_si_no("¿Desea orden descendente?")
+        )
+
+        print_tabla_mejores_clientes(mejores_clientes)
+
+        input("Presione <enter> para volver al menú > ")
+
         return self.VISTA_MENU
 
     def vista_reporte_duracion_estadias(self, vista=None):
         print_seccion(self.hotel + " - Reporte de estadías")
 
-        reservaciones = self.reporte_estadia()
+        reservaciones = self.reporte_estadia(
+            not leer_si_no("¿Desea orden descendente?")
+        )
 
         print_tabla_reservaciones(reservaciones)
-        print("Presione enter para volver al menú")
+        input("Presione <enter> para volver al menú > ")
 
         return self.VISTA_MENU

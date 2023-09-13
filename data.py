@@ -1,8 +1,11 @@
 import datetime
 from enum import StrEnum
+from collections import namedtuple
 
 
 class HabitacionTipo(StrEnum):
+    """Representa el tipo de habitación."""
+
     Doble = "doble"
     Matrimonial = "matrimonial"
     MatrimonialDeluxe = "matrimonial_deluxe"
@@ -23,6 +26,8 @@ class HabitacionTipo(StrEnum):
 
 
 class ReservacionEstado(StrEnum):
+    """Representa el estado de una reservación."""
+
     Pendiente = "pendiente"
     Abonada = "abonada"
     Pagada = "pagada"
@@ -33,6 +38,8 @@ class ReservacionEstado(StrEnum):
 
 
 class Cliente:
+    """Representa un cliente."""
+
     def __init__(self, ci: str, nombre: str, email: str):
         self.ci = ci
         self.nombre = nombre
@@ -42,7 +49,12 @@ class Cliente:
         return f"{self.ci} {self.nombre} {self.email}"
 
 
+MejorCliente = namedtuple("MejorCliente", ["cliente", "reservaciones_count"])
+
+
 class Reservacion:
+    """Representa una reservación."""
+
     def __init__(
         self,
         cliente: Cliente,
