@@ -1,7 +1,7 @@
 import datetime
 from typing import List
 
-from data import Cliente, MejorCliente, Reservacion
+from data import Cliente, Hotel, MejorCliente, Reservacion
 import re
 
 
@@ -105,7 +105,77 @@ def seleccionar_opcion(mensaje: str, opciones, valores=[]):
         print("")
 
 
-### Operaciones específicas
+# Operaciones específicas
+
+
+def print_tabla_hoteles(hoteles: List[Hotel], habitaciones_ocupadas: List[str]=[]):
+    """Imprime una tabla con las reservaciones"""
+
+    fmt = "| {id: <13} | {nombre: <32} | {capacidad: >9} | {telefono: <11}  | {direccion} "
+    print(
+        fmt.format(
+            id="ID",
+            nombre="Nombre",
+            capacidad="Capacidad",
+            telefono="Teléfono",
+            direccion="Dirección",
+        ),
+    )
+    print(
+        fmt.format(
+            id=":--:",
+            nombre=":--:",
+            capacidad=":--:",
+            telefono=":--:",
+            direccion=":--:",
+        ),
+    )
+
+    for h in hoteles:
+        print(
+            fmt.format(
+                id=h.id,
+                nombre=h.nombre,
+                capacidad=h.capacidad(),
+                telefono=h.telefono,
+                direccion=h.direccion,
+            )
+        )
+    print(end="\n\n")
+
+
+def print_tabla_habitaciones(hotel: Hotel):
+    """Imprime una tabla con las habitaciones de un Hotel"""
+
+    fmt = "| {tipo: <18} | {nombre: <24} | {capacidad: >9} | {precio: >6}"
+    print(
+        fmt.format(
+            tipo="ID",
+            nombre="Nombre",
+            capacidad="Capacidad",
+            precio="Precio",
+        ),
+    )
+    print(
+        fmt.format(
+            tipo=":--:",
+            nombre=":--:",
+            capacidad=":--:",
+            precio=":--:",
+        ),
+    )
+
+    precio_fmt = "{:.2f}"
+    for tipo in hotel.habitacionesTipos.values():
+        print(
+            fmt.format(
+                tipo=tipo.codigo,
+                nombre=tipo.nombre,
+                capacidad=tipo.capacidad,
+                precio=precio_fmt.format(tipo.precio),
+            )
+        )
+    print(end="\n\n")
 
 
 def print_tabla_reservaciones(reservaciones: List[Reservacion]):
@@ -129,17 +199,17 @@ def print_tabla_reservaciones(reservaciones: List[Reservacion]):
     )
     print(
         fmt.format(
-            id="---",
-            hotel_id="---",
-            cliente_ci="---",
-            habitacion="---",
-            fecha_entrada="---",
-            fecha_salida="---",
-            duracion="---",
-            estado="---",
-            precio="---",
-            personas_count="---",
-            observaciones="---",
+            id=":--:",
+            hotel_id=":--:",
+            cliente_ci=":--:",
+            habitacion=":--:",
+            fecha_entrada=":--:",
+            fecha_salida=":--:",
+            duracion=":--:",
+            estado=":--:",
+            precio=":--:",
+            personas_count=":--:",
+            observaciones=":--:",
         ),
     )
     for r in reservaciones:
@@ -158,7 +228,7 @@ def print_tabla_reservaciones(reservaciones: List[Reservacion]):
                 observaciones=r.observaciones or "-",
             )
         )
-    print()
+    print(end="\n\n")
 
 
 def print_tabla_mejores_clientes(clientes: List[MejorCliente]):
@@ -181,7 +251,7 @@ def print_tabla_mejores_clientes(clientes: List[MejorCliente]):
                 count=count,
             )
         )
-    print()
+    print(end="\n\n")
 
 
 def leer_date(mensaje: str):

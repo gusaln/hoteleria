@@ -3,7 +3,7 @@
         "id": 1000,
         "nombre": "El Gran Hotel de Budapest",
         "direccion": "dirección 1",
-        "telefono": "0241 111 3333",
+        "telefono": "02411113333",
         "habitaciones": {
             "101": "doble",
             "102": "doble",
@@ -30,27 +30,32 @@
         },
         "tipos": [
             {
-                "nombre": "doble",
+                "codigo": "doble",
+                "nombre": "Doble",
                 "precio": 80,
                 "capacidad": 2
             },
             {
-                "nombre": "matrimonial",
+                "codigo": "matrimonial",
+                "nombre": "Matrimonial",
                 "precio": 85,
                 "capacidad": 2
             },
             {
-                "nombre": "matrimonial_deluxe",
+                "codigo": "matrimonial_deluxe",
+                "nombre": "Matrimonial Deluxe",
                 "precio": 100,
                 "capacidad": 2
             },
             {
-                "nombre": "triple",
+                "codigo": "triple",
+                "nombre": "Triple",
                 "precio": 120,
                 "capacidad": 3
             },
             {
-                "nombre": "suite",
+                "codigo": "suite",
+                "nombre": "Suite",
                 "precio": 950,
                 "capacidad": 8
             }
@@ -60,7 +65,7 @@
         "id": 1001,
         "nombre": "El Hotel de la Costa",
         "direccion": "dirección 2",
-        "telefono": "0241 222 3333",
+        "telefono": "02412223333",
         "habitaciones": {
             "101": "doble",
             "102": "doble",
@@ -80,27 +85,32 @@
         },
         "tipos": [
             {
-                "nombre": "doble",
+                "codigo": "doble",
+                "nombre": "Doble",
                 "precio": 100,
                 "capacidad": 2
             },
             {
-                "nombre": "matrimonial",
+                "codigo": "matrimonial",
+                "nombre": "Matrimonial",
                 "precio": 110,
                 "capacidad": 2
             },
             {
-                "nombre": "matrimonial_deluxe",
+                "codigo": "matrimonial_deluxe",
+                "nombre": "Matrimonial Deluxe",
                 "precio": 120,
                 "capacidad": 2
             },
             {
-                "nombre": "triple",
+                "codigo": "triple",
+                "nombre": "Triple",
                 "precio": 150,
                 "capacidad": 3
             },
             {
-                "nombre": "suite",
+                "codigo": "suite",
+                "nombre": "Suite",
                 "precio": 1100,
                 "capacidad": 5
             }

@@ -1,13 +1,14 @@
 import datetime
 from enum import StrEnum
 from collections import namedtuple
-from typing import Dict
+from typing import Dict, List
 
 
 class HabitacionTipo():
     """Representa el tipo de habitación."""
 
-    def __init__(self, nombre: str, capacidad: int, precio: float):
+    def __init__(self, codigo: str, nombre: str, capacidad: int, precio: float):
+        self.codigo = codigo
         self.nombre = nombre
         self.capacidad = capacidad
         self.precio = precio
@@ -19,12 +20,34 @@ class HabitacionTipo():
 class Hotel():
     """Representa un hotel."""
 
-    def __init__(self, nombre: str, direccion: str, habitaciones: Dict[str, str], habitacionesTipos: Dict[str, HabitacionTipo], id=None):
+    def __init__(self, nombre: str, direccion: str, telefono: str, habitaciones: Dict[str, str], habitacionesTipos: Dict[str, HabitacionTipo], id=None):
         self.id = id or int(datetime.datetime.now().timestamp() * 1000)
         self.nombre = nombre
         self.direccion = direccion
+        self.telefono = telefono
         self.habitaciones = habitaciones
         self.habitacionesTipos = habitacionesTipos
+
+    def capacidad(self) -> int:
+        """Devuelve la capacidad del hotel."""
+        capacidad = 0
+
+        for habitacion in self.habitaciones.values():
+            capacidad += self.habitacionesTipos[habitacion].capacidad
+
+        return capacidad
+
+    def capacidad_disponible(self, habitaciones_ocupadas: List[str] = []) -> int:
+        """Devuelve la capacidad disponible del hotel."""
+        capacidad = 0
+
+        busy = dict((h, True) for h in habitaciones_ocupadas)
+
+        for habitacion in self.habitaciones.values():
+            if habitacion not in busy:
+                capacidad += self.habitacionesTipos[habitacion].capacidad
+
+        return capacidad
 
     def tiene_habitacion(self, habitacion: str) -> bool:
         """Devuelve si la habitación existe."""
