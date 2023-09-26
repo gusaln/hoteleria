@@ -1,0 +1,109 @@
+[
+    {
+        "id": 1000,
+        "nombre": "El Gran Hotel de Budapest",
+        "direccion": "dirección 1",
+        "telefono": "0241 111 3333",
+        "habitaciones": {
+            "101": "doble",
+            "102": "doble",
+            "103": "doble",
+            "104": "doble",
+            "105": "doble",
+            "106": "doble",
+            "201": "matrimonial",
+            "202": "matrimonial",
+            "203": "matrimonial",
+            "204": "matrimonial",
+            "205": "matrimonial",
+            "206": "matrimonial",
+            "301": "triple",
+            "302": "triple",
+            "303": "triple",
+            "304": "triple",
+            "401": "matrimonial_deluxe",
+            "402": "matrimonial_deluxe",
+            "403": "matrimonial_deluxe",
+            "404": "matrimonial_deluxe",
+            "501": "suite",
+            "502": "suite"
+        },
+        "tipos": [
+            {
+                "nombre": "doble",
+                "precio": 80,
+                "capacidad": 2
+            },
+            {
+                "nombre": "matrimonial",
+                "precio": 85,
+                "capacidad": 2
+            },
+            {
+                "nombre": "matrimonial_deluxe",
+                "precio": 100,
+                "capacidad": 2
+            },
+            {
+                "nombre": "triple",
+                "precio": 120,
+                "capacidad": 3
+            },
+            {
+                "nombre": "suite",
+                "precio": 950,
+                "capacidad": 8
+            }
+        ]
+    },
+    {
+        "id": 1001,
+        "nombre": "El Hotel de la Costa",
+        "direccion": "dirección 2",
+        "telefono": "0241 222 3333",
+        "habitaciones": {
+            "101": "doble",
+            "102": "doble",
+            "103": "doble",
+            "104": "doble",
+            "201": "matrimonial",
+            "202": "matrimonial",
+            "203": "matrimonial",
+            "204": "matrimonial",
+            "301": "triple",
+            "302": "triple",
+            "303": "triple",
+            "401": "matrimonial_deluxe",
+            "402": "matrimonial_deluxe",
+            "501": "suite",
+            "502": "suite"
+        },
+        "tipos": [
+            {
+                "nombre": "doble",
+                "precio": 100,
+                "capacidad": 2
+            },
+            {
+                "nombre": "matrimonial",
+                "precio": 110,
+                "capacidad": 2
+            },
+            {
+                "nombre": "matrimonial_deluxe",
+                "precio": 120,
+                "capacidad": 2
+            },
+            {
+                "nombre": "triple",
+                "precio": 150,
+                "capacidad": 3
+            },
+            {
+                "nombre": "suite",
+                "precio": 1100,
+                "capacidad": 5
+            }
+        ]
+    }
+]

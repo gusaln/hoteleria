@@ -1,42 +1,6 @@
 {
-    "hotel": {
-        "nombre": "El Gran Hotel de Budapest"
-    },
-
-    "habitaciones": {
-        "101": "doble", 
-        "102": "doble", 
-        "103": "doble", 
-        "104": "doble", 
-        "105": "doble",
-        "106": "doble",
-
-        "201": "matrimonial", 
-        "202": "matrimonial", 
-        "203": "matrimonial", 
-        "204": "matrimonial", 
-        "205": "matrimonial",
-        "206": "matrimonial",
-
-        "301": "triple", 
-        "302": "triple", 
-        "303": "triple", 
-        "304": "triple", 
-
-        "401": "matrimonial_deluxe", 
-        "402": "matrimonial_deluxe", 
-        "403": "matrimonial_deluxe", 
-        "404": "matrimonial_deluxe", 
-
-        "501": "suite",
-        "502": "suite"
-    },
-
-    "precios": {
-        "doble": 80,
-        "matrimonial": 85,
-        "triple": 120,
-        "matrimonial_deluxe": 100,
-        "suite": 950
-    }
+    "cadena": "Las Perlas del Caribe",
+    "archivo_hoteles": "./data/hoteles.json",
+    "archivo_reservaciones": "./data/reservaciones.csv",
+    "archivo_clientes": "./data/clientes.csv"
 }
