@@ -8,8 +8,7 @@ from config import leer_config
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
 if __name__ == "__main__":
-    configs = leer_config()
-    app = App(configs["hotel"]["nombre"], configs["habitaciones"], configs["precios"])
+    app = App(leer_config())
 
     app.cargar()
 

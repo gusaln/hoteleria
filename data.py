@@ -1,37 +1,40 @@
 import datetime
 from enum import StrEnum
 from collections import namedtuple
+from typing import Dict
 
 
-class HabitacionTipo(StrEnum):
+class HabitacionTipo():
     """Representa el tipo de habitación."""
 
-    Doble = "doble"
-    Matrimonial = "matrimonial"
-    MatrimonialDeluxe = "matrimonial_deluxe"
-    Triple = "triple"
-    Suite = "suite"
-
-    def label(self):
-        return {
-            HabitacionTipo.Doble: "Doble",
-            HabitacionTipo.Matrimonial: "Matrimonial",
-            HabitacionTipo.MatrimonialDeluxe: "Matrimonial Deluxe",
-            HabitacionTipo.Triple: "Triple",
-            HabitacionTipo.Suite: "Suite",
-        }[self]
-
-    def capacidad(self):
-        return {
-            HabitacionTipo.Doble: 2,
-            HabitacionTipo.Matrimonial: 2,
-            HabitacionTipo.MatrimonialDeluxe: 2,
-            HabitacionTipo.Triple: 3,
-            HabitacionTipo.Suite: 8,
-        }[self]
+    def __init__(self, nombre: str, capacidad: int, precio: float):
+        self.nombre = nombre
+        self.capacidad = capacidad
+        self.precio = precio
 
     def __repr__(self):
-        return "<%s.%s>" % (self.__class__.__name__, self._name_)
+        return "<HabitacionTipo %s capacidad=%d precio=%f>" % (self.nombre, self.capacidad, self.precio)
+
+
+class Hotel():
+    """Representa un hotel."""
+
+    def __init__(self, nombre: str, direccion: str, habitaciones: Dict[str, str], habitacionesTipos: Dict[str, HabitacionTipo], id=None):
+        self.id = id or int(datetime.datetime.now().timestamp() * 1000)
+        self.nombre = nombre
+        self.direccion = direccion
+        self.habitaciones = habitaciones
+        self.habitacionesTipos = habitacionesTipos
+
+    def tiene_habitacion(self, habitacion: str) -> bool:
+        """Devuelve si la habitación existe."""
+        return habitacion in self.habitaciones
+
+    def tipo_habitacion(self, habitacion: str):
+        """Devuelve el tipo de la habitación."""
+        if self.tiene_habitacion(habitacion):
+            return self.habitaciones[habitacion]
+        return None
 
 
 class ReservacionEstado(StrEnum):
@@ -66,6 +69,7 @@ class Reservacion:
 
     def __init__(
         self,
+        hotel_id: int,
         cliente: Cliente,
         habitacion: str,
         estado: ReservacionEstado,
@@ -79,6 +83,7 @@ class Reservacion:
         id=None,
     ):
         self.id = id or int(datetime.datetime.now().timestamp() * 1000)
+        self.hotel_id = hotel_id
         self.cliente = cliente
         self.habitacion = habitacion
         self.estado = estado

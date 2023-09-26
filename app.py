@@ -1,9 +1,11 @@
 import datetime
+import json
 import os
 from typing import List, Dict
-from config import CURRENT_DIR
-from data import Cliente, HabitacionTipo, MejorCliente, Reservacion, ReservacionEstado
+from config import CURRENT_DIR, Config
+from data import Cliente, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
 import csv
+from listas import Queue
 
 from ordenamiento import Ordenable, heapsort, mergesort, quicksort, shellsort
 from term import *
@@ -33,23 +35,21 @@ class App:
     Contiene el estado actual de la aplicación así como sus operaciones.
     """
 
-    def __init__(
-        self,
-        hotel: str,
-        habitaciones: Dict[str, str] = {},
-        precios: Dict[str, float] = {},
-        clientes: Dict[str, Cliente] = {},
-        reservaciones: List[Reservacion] = [],
-    ):
-        self.hotel = hotel
-        self.habitaciones = habitaciones
-        self.precios = precios
-        self.clientes = clientes
-        self.reservaciones = reservaciones
+    def __init__(self, config: Config):
+        self.config = config
+        self.cadenaHotelera = config.cadena
+
+        self.hoteles = Queue()
+        self.clientes = {}
+        self.reservaciones = Queue()
+
+        # Esta línea es para ayudar al IDE a entender que aquí va a un Hotel
+        self.hotelSeleccionado = Hotel(0, "", "", {}, {})
+        self.hotelSeleccionado = None
+
         self.ordenamiento = [1]
 
     ## Métodos de I.O.
-
     def cargar(self):
         """Carga los datos del sistema.
 
@@ -58,7 +58,7 @@ class App:
 
         print_info("Cargando archivos de datos")
 
-        clientes_file_path = os.path.join(CURRENT_DIR, "data", "clientes.csv")
+        clientes_file_path = os.path.abspath(self.config.archivo_clientes)
         if not os.path.exists(clientes_file_path):
             clientes_file_path = os.path.join(CURRENT_DIR, "seeds", "clientes.csv")
 
@@ -72,7 +72,27 @@ class App:
                 id, nombre, email = row
                 self.clientes[id] = Cliente(id, nombre, email)
 
-        reservaciones_file_path = os.path.join(CURRENT_DIR, "data", "reservaciones.csv")
+        hoteles_file_path = os.path.abspath(self.config.archivo_hoteles)
+        if not os.path.exists(hoteles_file_path):
+            hoteles_file_path = os.path.join(CURRENT_DIR, "seeds", "hoteles.json")
+
+        with open(hoteles_file_path) as fp:
+            hoteles = json.load(fp)
+            for hotelRaw in hoteles:
+                tipos = {}
+                tiposRaw = hotelRaw["tipos"]
+                for tipo in tiposRaw:
+                    tipos[tipo["nombre"]] = HabitacionTipo(tipo["nombre"], tipo["capacidad"], tipo["precio"])
+
+                self.hoteles.push(Hotel(
+                    hotelRaw["nombre"],
+                    hotelRaw["direccion"],
+                    hotelRaw["habitaciones"],
+                    tipos,
+                    hotelRaw["id"],
+                ))
+
+        reservaciones_file_path = os.path.abspath(self.config.archivo_reservaciones)
         if not os.path.exists(reservaciones_file_path):
             reservaciones_file_path = os.path.join(
                 CURRENT_DIR, "seeds", "reservaciones.csv"
@@ -87,6 +107,7 @@ class App:
             ):
                 (
                     id,
+                    hotel_id,
                     cliente_ci,
                     habitacion,
                     estado,
@@ -104,8 +125,9 @@ class App:
                 hora_salida = datetime.datetime.strptime(hora_salida, "%H:%M").time()
                 precio = float(precio)
 
-                self.reservaciones.append(
+                self.reservaciones.push(
                     Reservacion(
+                        hotel_id,
                         self.clientes[cliente_ci],
                         habitacion,
                         ReservacionEstado(estado),
@@ -120,6 +142,8 @@ class App:
                     )
                 )
 
+        self.hotelSeleccionado = self.hoteles.peek()
+
         print_info("Datos cargados")
 
     def persistir(self):
@@ -127,8 +151,10 @@ class App:
 
         print_info("Guardando datos")
 
-        clientes_file_path = os.path.join(CURRENT_DIR, "data", "clientes.csv")
-        reservaciones_file_path = os.path.join(CURRENT_DIR, "data", "reservaciones.csv")
+        clientes_file_path = os.path.abspath(self.config.archivo_clientes)
+        hoteles_file_path = os.path.abspath(self.config.archivo_hoteles)
+        reservaciones_file_path = os.path.abspath(self.config.archivo_reservaciones)
+
         with open(clientes_file_path, "w") as fp:
             csvwriter = csv.writer(
                 fp, delimiter=";", lineterminator="\n", quoting=csv.QUOTE_MINIMAL
@@ -136,12 +162,21 @@ class App:
             for id, cliente in self.clientes.items():
                 csvwriter.writerow((id, cliente.nombre, cliente.email))
 
+        with open(hoteles_file_path, "w") as fp:
+            hoteles = [
+                {"id": h.id, "nombre": h.nombre, "direccion": h.direccion, "habitaciones": h.habitaciones, "tipos": [h.habitacionesTipos[t].__dict__ for t in h.habitacionesTipos]} 
+                for h in self.hoteles
+                ]
+            json.dump(hoteles, fp)
+
         with open(reservaciones_file_path, "w") as fp:
             csvwriter = csv.writer(
                 fp, delimiter=";", lineterminator="\n", quoting=csv.QUOTE_MINIMAL
             )
+
             for reservacion in self.reservaciones:
                 id = reservacion.id
+                hotel_id = reservacion.hotel_id
                 cliente_ci = reservacion.cliente.ci
                 habitacion = reservacion.habitacion
                 estado = reservacion.estado
@@ -155,6 +190,7 @@ class App:
                 csvwriter.writerow(
                     (
                         id,
+                        hotel_id,
                         cliente_ci,
                         habitacion,
                         estado,
@@ -197,12 +233,12 @@ class App:
 
     def tiene_habitacion(self, habitacion: str):
         """Devuelve si la habitación existe."""
-        return habitacion in self.habitaciones
+        return self.hotelSeleccionado is not None and self.hotelSeleccionado.tiene_habitacion(habitacion)
 
     def tipo_habitacion(self, habitacion: str):
         """Devuelve el tipo de la habitación."""
-        if self.tiene_habitacion(habitacion):
-            return self.habitaciones[habitacion]
+        if self.hotelSeleccionado is not None:
+            return self.hotelSeleccionado.tipo_habitacion(habitacion)
         return None
 
     def get_reservaciones_por_periodo(
@@ -301,6 +337,7 @@ class App:
         precio = precio_por_dia * duracion_dias
 
         r = Reservacion(
+            self.hotelSeleccionado.id,
             self.clientes[cliente_ci],
             habitacion,
             ReservacionEstado.Pendiente,
@@ -313,7 +350,7 @@ class App:
             observaciones,
         )
 
-        self.reservaciones.append(r)
+        self.reservaciones.push(r)
         self.persistir()
 
         return r
@@ -331,7 +368,7 @@ class App:
     def run(self):
         """Ejecuta el TUI de la aplicación"""
 
-        print_titulo("Bienvenido al sistema de reservas de '%s'" % self.hotel)
+        print_titulo("Bienvenido al sistema de gestión de la cadena '%s'" % self.cadenaHotelera)
 
         vista = self.VISTA_MENU
 
@@ -340,140 +377,27 @@ class App:
                 return
 
             elif vista == self.VISTA_MENU:
-                vista = self.vista_menu(vista)
+                vista = vista_menu(self, vista)
 
             elif vista == self.VISTA_LISTAR:
-                vista = self.vista_listar_reservaciones(vista)
+                vista = vista_listar_reservaciones(self, vista)
 
             elif vista == self.VISTA_RESERVAR:
-                vista = self.vista_reservar(vista)
+                vista = vista_reservar(self, vista)
 
             elif vista == self.VISTA_REPORTE_DEL_PERIODO:
-                vista = self.vista_reporte_del_periodo(vista)
+                vista = vista_reporte_del_periodo(self, vista)
 
             elif vista == self.VISTA_REPORTE_MEJORES_CLIENTES:
-                vista = self.vista_reporte_mejores_clientes(vista)
+                vista = vista_reporte_mejores_clientes(self, vista)
 
             elif vista == self.VISTA_REPORTE_DURACION:
-                vista = self.vista_reporte_duracion_estadias(vista)
+                vista = vista_reporte_duracion_estadias(self, vista)
 
             else:
                 vista == self.VISTA_SALIR
 
             print("-" * 80, end="\n\n")
-
-    def vista_menu(self, vista=None):
-        """Muestra el menú principal"""
-
-        print_seccion(self.hotel + " - Menú")
-
-        opciones = [
-            ["Reservar", self.VISTA_RESERVAR],
-            ["Ver reservaciones", self.VISTA_LISTAR],
-            [
-                "Reporte: reservaciones en período",
-                self.VISTA_REPORTE_DEL_PERIODO,
-            ],
-            ["Reporte: mejores clientes", self.VISTA_REPORTE_MEJORES_CLIENTES],
-            ["Reporte: duración de estadías", self.VISTA_REPORTE_DURACION],
-            ["Salir", self.VISTA_SALIR],
-        ]
-
-        vista = seleccionar_opcion(
-            "Seleccione una operación",
-            [o[0] for o in opciones],
-            [o[1] for o in opciones],
-        )
-
-        return vista or self.VISTA_MENU
-
-    def vista_reservar(self, vista=None):
-        """Muestra la vista de reservar"""
-        print_seccion(self.hotel + " - Reservar")
-
-        fecha_inicial = leer_date("Indique la fecha en la que desea llegar")
-        fecha_final = leer_date("Indique la fecha en la que desea salir")
-        personas_count = leer_numero("Indique el número de personas que se quedarán", 1)
-
-        reservaciones_del_periodo = set(
-            r.habitacion
-            for r in self.get_reservaciones_por_periodo(fecha_inicial, fecha_final)
-        )
-        tipos_utiles = [t for t in HabitacionTipo if t.capacidad() >= personas_count]
-
-        habitaciones_disponibles = []
-        for h, tipo in self.habitaciones.items():
-            if h not in reservaciones_del_periodo and tipo in tipos_utiles:
-                habitaciones_disponibles.append(h)
-
-        if len(habitaciones_disponibles) < 0:
-            print_info(
-                "No tenemos habitaciones disponibles en ese período para esa cantidad de personas"
-            )
-            return self.VISTA_MENU
-
-        print_info("Tenemos habitaciones disponibles")
-        for tipo, precio in self.precios.items():
-            if tipo not in tipos_utiles:
-                continue
-            print(f"  - {HabitacionTipo(tipo).label()} en {precio}")
-
-        if not leer_si_no(
-            "¿Desa proceder con la reservación con alguna de estas opciones?"
-        ):
-            return self.VISTA_MENU
-
-        tipo_seleccionado = seleccionar_opcion(
-            "Indique el tipo de habitación",
-            [HabitacionTipo(tipo).label() for tipo in tipos_utiles],
-            tipos_utiles,
-        )
-
-        duracion_dias = (fecha_final - fecha_inicial).days
-        precio = duracion_dias * self.precios[tipo_seleccionado]
-
-        habitacion = None
-        for h in habitaciones_disponibles:
-            if self.tipo_habitacion(h) == tipo_seleccionado:
-                habitacion = h
-                break
-
-        if not leer_si_no(
-            f"Sería un total de {precio} por la habitación {habitacion} por {duracion_dias} día(s) ¿Desa proceder?"
-        ):
-            return vista or self.VISTA_MENU
-
-        ci = "{:0>8}".format(leer_numero("Indique la C.I. del cliente"))
-        if ci in self.clientes:
-            print_info("Este cliente ya está registrado.")
-            print_info(self.clientes[ci].nombre)
-        else:
-            print_info("Este cliente no esta registrado. Vamos a solucionarlo.")
-            nombre = leer_str("¿Cuál es el nombre del cliente?")
-            email = leer_email("¿Cuál es el email del cliente?")
-
-            self.clientes[ci] = Cliente(ci, nombre, email)
-            print_info("Cliente registrado.")
-
-        observaciones = leer_str(
-            "¿Alguna observación sobre de la reservación? (presione <enter> para dejar el campo vacío)"
-        )
-        if observaciones == "":
-            observaciones = None
-
-        reservacion = self.crear_reservacion(
-            ci,
-            habitacion,
-            fecha_inicial,
-            fecha_final,
-            personas_count=personas_count,
-            observaciones=observaciones,
-        )
-
-        print_info("Reservación registrada")
-        print(reservacion)
-
-        return self.VISTA_MENU
 
     def format_ordenamiento(self):
         """Formatea el ordenamiento"""
@@ -499,118 +423,235 @@ class App:
 
         return ordenados
 
-    def vista_listar_reservaciones(self, vista=None):
-        """Muestra las reservaciones"""
 
-        print_seccion(self.hotel + " - Reservaciones")
+### Vistas ###
 
-        def seleccionar_orden():
-            while True:
-                print_info(
-                    "Estos son los parámetros por los que puede ordenar la lista:"
-                )
-                for p in PARAMETROS_ORDEN:
-                    print(f"  - [{p}] {PARAMETROS_ORDEN[p][0]}")
+def vista_menu(app: App, vista=None):
+    """Muestra el menú principal"""
 
-                print_info(
-                    "Indique el nro. de la opción para ordenar de forma ascendente y el nro. negativo para ordenar de forma descendente"
-                )
-                print_info(
-                    "Puede indicar varios valores separados por comas para ordenar por más de un parámetro de la forma '1, 2, -3'"
-                )
-                orden = leer_str(
-                    "Indique el orden o presione <enter> sin escribir nada para volver a la lista:"
-                )
-                if len(orden) == 0:
-                    return True
+    print_seccion(app.cadenaHotelera + " - Menú")
 
-                try:
-                    orden = [
-                        int(o) for o in filter(lambda s: len(s) > 0, orden.split(","))
-                    ]
-                except ValueError:
-                    print_error(
-                        "No se pudo procesar la entrada como parámetro de orden"
-                    )
-                    continue
+    opciones = [
+        ["Reservar", app.VISTA_RESERVAR],
+        ["Ver reservaciones", app.VISTA_LISTAR],
+        [
+            "Reporte: reservaciones en período",
+            app.VISTA_REPORTE_DEL_PERIODO,
+        ],
+        ["Reporte: mejores clientes", app.VISTA_REPORTE_MEJORES_CLIENTES],
+        ["Reporte: duración de estadías", app.VISTA_REPORTE_DURACION],
+        ["Salir", app.VISTA_SALIR],
+    ]
 
-                self.ordenamiento = list(
-                    filter(
-                        lambda o: abs(o) in PARAMETROS_ORDEN,
-                        orden,
-                    )
-                )
+    vista = seleccionar_opcion(
+        "Seleccione una operación",
+        [o[0] for o in opciones],
+        [o[1] for o in opciones],
+    )
 
-                print_info(
-                    "Nuevo orden:",
-                    self.format_ordenamiento(),
-                )
+    return vista or app.VISTA_MENU
 
-                break
+def vista_reservar(app: App, vista=None):
+    """Muestra la vista de reservar"""
+    print_seccion(app.cadenaHotelera + " - Reservar")
 
-            return True
+    fecha_inicial = leer_date("Indique la fecha en la que desea llegar")
+    fecha_final = leer_date("Indique la fecha en la que desea salir")
+    personas_count = leer_numero("Indique el número de personas que se quedarán", 1)
 
-        opciones = [
-            ["Ordenar", seleccionar_orden],
-            ["Volver al menú", lambda: False],
-        ]
+    reservaciones_del_periodo = set(
+        r.habitacion
+        for r in app.get_reservaciones_por_periodo(fecha_inicial, fecha_final)
+    )
+    tipos_utiles = [t for t in HabitacionTipo if t.capacidad() >= personas_count]
 
+    habitaciones_disponibles = []
+    for h, tipo in app.habitaciones.items():
+        if h not in reservaciones_del_periodo and tipo in tipos_utiles:
+            habitaciones_disponibles.append(h)
+
+    if len(habitaciones_disponibles) < 0:
+        print_info(
+            "No tenemos habitaciones disponibles en ese período para esa cantidad de personas"
+        )
+        return app.VISTA_MENU
+
+    print_info("Tenemos habitaciones disponibles")
+    for tipo, precio in app.precios.items():
+        if tipo not in tipos_utiles:
+            continue
+        print(f"  - {HabitacionTipo(tipo).label()} en {precio}")
+
+    if not leer_si_no(
+        "¿Desa proceder con la reservación con alguna de estas opciones?"
+    ):
+        return app.VISTA_MENU
+
+    tipo_seleccionado = seleccionar_opcion(
+        "Indique el tipo de habitación",
+        [HabitacionTipo(tipo).label() for tipo in tipos_utiles],
+        tipos_utiles,
+    )
+
+    duracion_dias = (fecha_final - fecha_inicial).days
+    precio = duracion_dias * app.precios[tipo_seleccionado]
+
+    habitacion = None
+    for h in habitaciones_disponibles:
+        if app.tipo_habitacion(h) == tipo_seleccionado:
+            habitacion = h
+            break
+
+    if not leer_si_no(
+        f"Sería un total de {precio} por la habitación {habitacion} por {duracion_dias} día(s) ¿Desa proceder?"
+    ):
+        return vista or app.VISTA_MENU
+
+    ci = "{:0>8}".format(leer_numero("Indique la C.I. del cliente"))
+    if ci in app.clientes:
+        print_info("Este cliente ya está registrado.")
+        print_info(app.clientes[ci].nombre)
+    else:
+        print_info("Este cliente no esta registrado. Vamos a solucionarlo.")
+        nombre = leer_str("¿Cuál es el nombre del cliente?")
+        email = leer_email("¿Cuál es el email del cliente?")
+
+        app.clientes[ci] = Cliente(ci, nombre, email)
+        print_info("Cliente registrado.")
+
+    observaciones = leer_str(
+        "¿Alguna observación sobre de la reservación? (presione <enter> para dejar el campo vacío)"
+    )
+    if observaciones == "":
+        observaciones = None
+
+    reservacion = app.crear_reservacion(
+        ci,
+        habitacion,
+        fecha_inicial,
+        fecha_final,
+        personas_count=personas_count,
+        observaciones=observaciones,
+    )
+
+    print_info("Reservación registrada")
+    print(reservacion)
+
+    return app.VISTA_MENU
+
+def vista_listar_reservaciones(app: App, vista=None):
+    """Muestra las reservaciones"""
+
+    print_seccion(app.cadenaHotelera + " - Reservaciones")
+
+    def seleccionar_orden():
         while True:
             print_info(
-                "Reservaciones ordenadas:",
-                self.format_ordenamiento(),
+                "Estos son los parámetros por los que puede ordenar la lista:"
             )
-            print_tabla_reservaciones(self.reservaciones_ordenadas())
-            print()
+            for p in PARAMETROS_ORDEN:
+                print(f"  - [{p}] {PARAMETROS_ORDEN[p][0]}")
 
-            accion = seleccionar_opcion(
-                "Seleccione una operación",
-                [o[0] for o in opciones],
-                [o[1] for o in opciones],
+            print_info(
+                "Indique el nro. de la opción para ordenar de forma ascendente y el nro. negativo para ordenar de forma descendente"
+            )
+            print_info(
+                "Puede indicar varios valores separados por comas para ordenar por más de un parámetro de la forma '1, 2, -3'"
+            )
+            orden = leer_str(
+                "Indique el orden o presione <enter> sin escribir nada para volver a la lista:"
+            )
+            if len(orden) == 0:
+                return True
+
+            try:
+                orden = [
+                    int(o) for o in filter(lambda s: len(s) > 0, orden.split(","))
+                ]
+            except ValueError:
+                print_error(
+                    "No se pudo procesar la entrada como parámetro de orden"
+                )
+                continue
+
+            app.ordenamiento = list(
+                filter(
+                    lambda o: abs(o) in PARAMETROS_ORDEN,
+                    orden,
+                )
             )
 
-            if not accion():
-                return self.VISTA_MENU
+            print_info(
+                "Nuevo orden:",
+                app.format_ordenamiento(),
+            )
 
-        return vista or self.VISTA_LISTAR
+            break
 
-    def vista_reporte_del_periodo(self, vista=None):
-        """Muestra el reporte del período"""
+        return True
 
-        print_seccion(self.hotel + " - Reporte del período")
-        reservaciones = self.reporte_en_periodo(
-            leer_date("Ingrese fecha inicial"),
-            leer_date("Ingrese fecha final"),
-            not leer_si_no("¿Desea orden descendente?"),
+    opciones = [
+        ["Ordenar", seleccionar_orden],
+        ["Volver al menú", lambda: False],
+    ]
+
+    while True:
+        print_info(
+            "Reservaciones ordenadas:",
+            app.format_ordenamiento(),
         )
-
+        print_tabla_reservaciones(app.reservaciones_ordenadas())
         print()
-        print_tabla_reservaciones(reservaciones)
-        input("Presione <enter> para volver al menú > ")
 
-        return self.VISTA_MENU
-
-    def vista_reporte_mejores_clientes(self, vista=None):
-        print_seccion(self.hotel + " - Reporte de Mejores clientes")
-
-        mejores_clientes = self.reporte_cant_reservaciones(
-            not leer_si_no("¿Desea orden descendente?")
+        accion = seleccionar_opcion(
+            "Seleccione una operación",
+            [o[0] for o in opciones],
+            [o[1] for o in opciones],
         )
 
-        print_tabla_mejores_clientes(mejores_clientes)
+        if not accion():
+            return app.VISTA_MENU
 
-        input("Presione <enter> para volver al menú > ")
+    return vista or app.VISTA_LISTAR
 
-        return self.VISTA_MENU
+def vista_reporte_del_periodo(app: App, vista=None):
+    """Muestra el reporte del período"""
 
-    def vista_reporte_duracion_estadias(self, vista=None):
-        print_seccion(self.hotel + " - Reporte de estadías")
+    print_seccion(app.cadenaHotelera + " - Reporte del período")
+    reservaciones = app.reporte_en_periodo(
+        leer_date("Ingrese fecha inicial"),
+        leer_date("Ingrese fecha final"),
+        not leer_si_no("¿Desea orden descendente?"),
+    )
 
-        reservaciones = self.reporte_estadia(
-            not leer_si_no("¿Desea orden descendente?")
-        )
+    print()
+    print_tabla_reservaciones(reservaciones)
+    input("Presione <enter> para volver al menú > ")
 
-        print_tabla_reservaciones(reservaciones)
-        input("Presione <enter> para volver al menú > ")
+    return app.VISTA_MENU
 
-        return self.VISTA_MENU
+def vista_reporte_mejores_clientes(app: App, vista=None):
+    print_seccion(app.cadenaHotelera + " - Reporte de Mejores clientes")
+
+    mejores_clientes = app.reporte_cant_reservaciones(
+        not leer_si_no("¿Desea orden descendente?")
+    )
+
+    print_tabla_mejores_clientes(mejores_clientes)
+
+    input("Presione <enter> para volver al menú > ")
+
+    return app.VISTA_MENU
+
+def vista_reporte_duracion_estadias(app: App, vista=None):
+    print_seccion(app.cadenaHotelera + " - Reporte de estadías")
+
+    reservaciones = app.reporte_estadia(
+        not leer_si_no("¿Desea orden descendente?")
+    )
+
+    print_tabla_reservaciones(reservaciones)
+    input("Presione <enter> para volver al menú > ")
+
+    return app.VISTA_MENU
+

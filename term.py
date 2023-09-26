@@ -111,10 +111,11 @@ def seleccionar_opcion(mensaje: str, opciones, valores=[]):
 def print_tabla_reservaciones(reservaciones: List[Reservacion]):
     """Imprime una tabla con las reservaciones"""
 
-    fmt = "{id: <13}  {cliente_ci: <8}  {habitacion: <4}  {estado: <9}  {fecha_entrada: <10}  {fecha_salida: <10}  {duracion: <8}  {precio: >6}  {personas_count: ^13}  {observaciones}"
+    fmt = "| {id: <13} | {hotel_id: <13} | {cliente_ci: <8} | {habitacion: <4} | {estado: <9} | {fecha_entrada: <10} | {fecha_salida: <10} | {duracion: <8} | {precio: >6} | {personas_count: ^13} | {observaciones}"
     print(
         fmt.format(
             id="ID",
+            hotel_id="Hotel ID",
             cliente_ci="Cliente",
             habitacion="Hab.",
             fecha_entrada="F. Entrada",
@@ -126,10 +127,26 @@ def print_tabla_reservaciones(reservaciones: List[Reservacion]):
             observaciones="Observaciones",
         ),
     )
+    print(
+        fmt.format(
+            id="---",
+            hotel_id="---",
+            cliente_ci="---",
+            habitacion="---",
+            fecha_entrada="---",
+            fecha_salida="---",
+            duracion="---",
+            estado="---",
+            precio="---",
+            personas_count="---",
+            observaciones="---",
+        ),
+    )
     for r in reservaciones:
         print(
             fmt.format(
                 id=r.id,
+                hotel_id=r.hotel_id,
                 cliente_ci=r.cliente.ci,
                 habitacion=r.habitacion,
                 fecha_entrada=r.fecha_entrada.strftime("%d/%m/%Y"),
@@ -147,7 +164,7 @@ def print_tabla_reservaciones(reservaciones: List[Reservacion]):
 def print_tabla_mejores_clientes(clientes: List[MejorCliente]):
     """Imprime una tabla con los clientes"""
 
-    fmt = "{ci: <8}  {nombre: <24}  {count: <3}"
+    fmt = "| {ci: <8} | {nombre: <24} | {count: <3} |"
     print(
         fmt.format(
             ci="C.I.",
