@@ -1,4 +1,5 @@
 import datetime
+from enum import IntEnum, auto
 import json
 import os
 from typing import List, Dict
@@ -142,7 +143,7 @@ class App:
                     )
                 )
 
-        self.hotelSeleccionado = self.hoteles.peek()
+        # self.hotelSeleccionado = self.hoteles.peek()
 
         print_info("Datos cargados")
 
@@ -332,6 +333,8 @@ class App:
         personas_count=1,
         observaciones=None,
     ) -> Reservacion:
+        """Crea una nueva reservación."""
+
         precio_por_dia = self.precios[self.habitaciones[habitacion]]
         duracion_dias = (fecha_salida - fecha_entrada).days
         precio = precio_por_dia * duracion_dias
@@ -357,47 +360,47 @@ class App:
 
     ## OPERACIONES DE CLI
 
-    VISTA_SALIR = -1
-    VISTA_MENU = 0
-    VISTA_RESERVAR = 1
-    VISTA_LISTAR = 2
-    VISTA_REPORTE_DEL_PERIODO = 3
-    VISTA_REPORTE_MEJORES_CLIENTES = 4
-    VISTA_REPORTE_DURACION = 5
+    # VISTA_SALIR = -1
+    # VISTA_MENU = 0
+    # VISTA_RESERVAR = 1
+    # VISTA_RESERVACIONES_LISTAR = 2
+    # VISTA_RESERVACIONES_REPORTE_DEL_PERIODO = 3
+    # VISTA_RESERVACIONES_REPORTE_MEJORES_CLIENTES = 4
+    # VISTA_RESERVACIONES_REPORTE_DURACION = 5
 
     def run(self):
         """Ejecuta el TUI de la aplicación"""
 
         print_titulo("Bienvenido al sistema de gestión de la cadena '%s'" % self.cadenaHotelera)
 
-        vista = self.VISTA_MENU
+        vista = Vista.Menu
 
         while True:
-            if vista == self.VISTA_SALIR:
+            if vista is Vista.Salir:
                 return
 
-            elif vista == self.VISTA_MENU:
+            elif vista is Vista.Menu:
                 vista = vista_menu(self, vista)
 
-            elif vista == self.VISTA_LISTAR:
-                vista = vista_listar_reservaciones(self, vista)
+            elif vista is Vista.ReservacionesListar:
+                vista = vista_reservaciones_listar(self, vista)
 
-            elif vista == self.VISTA_RESERVAR:
+            elif vista is Vista.Reservar:
                 vista = vista_reservar(self, vista)
 
-            elif vista == self.VISTA_REPORTE_DEL_PERIODO:
-                vista = vista_reporte_del_periodo(self, vista)
+            elif vista is Vista.ReservacionesReporteDelPeriodo:
+                vista = vista_reservaciones_reporte_del_periodo(self, vista)
 
-            elif vista == self.VISTA_REPORTE_MEJORES_CLIENTES:
-                vista = vista_reporte_mejores_clientes(self, vista)
+            elif vista is Vista.ReservacionesReporteMejoresClientes:
+                vista = vista_reservaciones_reporte_mejores_clientes(self, vista)
 
-            elif vista == self.VISTA_REPORTE_DURACION:
-                vista = vista_reporte_duracion_estadias(self, vista)
+            elif vista is Vista.ReservacionesReporteDuracion:
+                vista = vista_reservaciones_reporte_duracion_estadias(self, vista)
 
             else:
-                vista == self.VISTA_SALIR
+                return
 
-            print("-" * 80, end="\n\n")
+            print(vista, "-" * 80, end="\n\n")
 
     def format_ordenamiento(self):
         """Formatea el ordenamiento"""
@@ -426,30 +429,47 @@ class App:
 
 ### Vistas ###
 
+class Vista(IntEnum):
+    """Vistas del TUI"""
+
+    Menu = auto()
+
+    HotelesListar = auto()
+
+    Reservar = auto()
+    ReservacionesListar = auto()
+    ReservacionesReporteDelPeriodo = auto()
+    ReservacionesReporteMejoresClientes = auto()
+    ReservacionesReporteDuracion = auto()
+
+    Salir = auto()
+
+    def label(self):
+        return {
+            self.Salir: "Salir",
+            self.Menu: "Menu",
+
+            self.HotelesListar: "Ver Hoteles",
+
+            self.Reservar: "Reservar",
+            self.ReservacionesListar: "Ver Reservaciones",
+            self.ReservacionesReporteDelPeriodo: "Reporte: reservaciones en período",
+            self.ReservacionesReporteMejoresClientes: "Reporte: mejores clientes",
+            self.ReservacionesReporteDuracion: "Reporte: duración de estadías",
+        }[self.value]
+
 def vista_menu(app: App, vista=None):
     """Muestra el menú principal"""
 
     print_seccion(app.cadenaHotelera + " - Menú")
 
-    opciones = [
-        ["Reservar", app.VISTA_RESERVAR],
-        ["Ver reservaciones", app.VISTA_LISTAR],
-        [
-            "Reporte: reservaciones en período",
-            app.VISTA_REPORTE_DEL_PERIODO,
-        ],
-        ["Reporte: mejores clientes", app.VISTA_REPORTE_MEJORES_CLIENTES],
-        ["Reporte: duración de estadías", app.VISTA_REPORTE_DURACION],
-        ["Salir", app.VISTA_SALIR],
-    ]
-
     vista = seleccionar_opcion(
         "Seleccione una operación",
-        [o[0] for o in opciones],
-        [o[1] for o in opciones],
+        [v.label() for v in Vista if v is not Vista.Menu],
+        [v for v in Vista if v is not Vista.Menu],
     )
 
-    return vista or app.VISTA_MENU
+    return Vista(vista)
 
 def vista_reservar(app: App, vista=None):
     """Muestra la vista de reservar"""
@@ -474,7 +494,7 @@ def vista_reservar(app: App, vista=None):
         print_info(
             "No tenemos habitaciones disponibles en ese período para esa cantidad de personas"
         )
-        return app.VISTA_MENU
+        return Vista.Menu
 
     print_info("Tenemos habitaciones disponibles")
     for tipo, precio in app.precios.items():
@@ -485,7 +505,7 @@ def vista_reservar(app: App, vista=None):
     if not leer_si_no(
         "¿Desa proceder con la reservación con alguna de estas opciones?"
     ):
-        return app.VISTA_MENU
+        return Vista.Menu
 
     tipo_seleccionado = seleccionar_opcion(
         "Indique el tipo de habitación",
@@ -505,7 +525,7 @@ def vista_reservar(app: App, vista=None):
     if not leer_si_no(
         f"Sería un total de {precio} por la habitación {habitacion} por {duracion_dias} día(s) ¿Desa proceder?"
     ):
-        return vista or app.VISTA_MENU
+        return vista or Vista.Menu
 
     ci = "{:0>8}".format(leer_numero("Indique la C.I. del cliente"))
     if ci in app.clientes:
@@ -537,9 +557,9 @@ def vista_reservar(app: App, vista=None):
     print_info("Reservación registrada")
     print(reservacion)
 
-    return app.VISTA_MENU
+    return Vista.Menu
 
-def vista_listar_reservaciones(app: App, vista=None):
+def vista_reservaciones_listar(app: App, vista=None):
     """Muestra las reservaciones"""
 
     print_seccion(app.cadenaHotelera + " - Reservaciones")
@@ -610,11 +630,11 @@ def vista_listar_reservaciones(app: App, vista=None):
         )
 
         if not accion():
-            return app.VISTA_MENU
+            return Vista.Menu
 
-    return vista or app.VISTA_LISTAR
+    return vista or Vista.ReservacionesListar
 
-def vista_reporte_del_periodo(app: App, vista=None):
+def vista_reservaciones_reporte_del_periodo(app: App, vista=None):
     """Muestra el reporte del período"""
 
     print_seccion(app.cadenaHotelera + " - Reporte del período")
@@ -628,9 +648,9 @@ def vista_reporte_del_periodo(app: App, vista=None):
     print_tabla_reservaciones(reservaciones)
     input("Presione <enter> para volver al menú > ")
 
-    return app.VISTA_MENU
+    return Vista.Menu
 
-def vista_reporte_mejores_clientes(app: App, vista=None):
+def vista_reservaciones_reporte_mejores_clientes(app: App, vista=None):
     print_seccion(app.cadenaHotelera + " - Reporte de Mejores clientes")
 
     mejores_clientes = app.reporte_cant_reservaciones(
@@ -641,9 +661,9 @@ def vista_reporte_mejores_clientes(app: App, vista=None):
 
     input("Presione <enter> para volver al menú > ")
 
-    return app.VISTA_MENU
+    return Vista.Menu
 
-def vista_reporte_duracion_estadias(app: App, vista=None):
+def vista_reservaciones_reporte_duracion_estadias(app: App, vista=None):
     print_seccion(app.cadenaHotelera + " - Reporte de estadías")
 
     reservaciones = app.reporte_estadia(
@@ -653,5 +673,5 @@ def vista_reporte_duracion_estadias(app: App, vista=None):
     print_tabla_reservaciones(reservaciones)
     input("Presione <enter> para volver al menú > ")
 
-    return app.VISTA_MENU
+    return Vista.Menu
 
