@@ -1,5 +1,5 @@
 import datetime
-from typing import List
+from typing import Iterable, List
 
 from data import Cliente, Hotel, MejorCliente, Reservacion
 import re
@@ -124,6 +124,16 @@ def seleccionar_opcion(mensaje: str, opciones, valores=[]):
 
 
 # Operaciones específicas
+
+def seleccionar_hotel(hoteles: Iterable[Hotel], msg: str):
+    """Muestra un selector de hoteles"""
+
+    hoteles = list(hoteles)
+    return seleccionar_opcion(
+        msg,
+        ["%d - %s" % (h.id, h.nombre) for h in hoteles],
+        hoteles,
+    )
 
 
 def print_tabla_hoteles(hoteles: List[Hotel], habitaciones_ocupadas: List[str]=[]):

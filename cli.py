@@ -12,6 +12,7 @@ class Vista(IntEnum):
     # Gestionar hoteles
     HotelesListar = auto()
     RegistrarHotel = auto()
+    HotelModificar = auto()
     GestionarHotel = auto()
     DejarDeGestionarHotel = auto()
 
@@ -37,6 +38,7 @@ class Vista(IntEnum):
 
             Vista.HotelesListar: "Ver Hoteles",
             Vista.RegistrarHotel: "Registrar hotel",
+            Vista.HotelModificar: "Hotel modificar",
 
             Vista.HabitacionModificar: "Modificar habitación",
             Vista.GestionarHotel: "Gestionar hotel",
@@ -54,11 +56,15 @@ class Vista(IntEnum):
         return {
             Vista.Menu: vista_menu,
             Vista.HotelesListar: vista_hoteles_listar,
-            Vista.GestionarHotel: vista_gestionar_hotel,
             Vista.RegistrarHotel: vista_registrar_hotel,
+            Vista.HotelModificar: vista_hotel_modificar,
+
+            Vista.GestionarHotel: vista_gestionar_hotel,
             Vista.DejarDeGestionarHotel: vista_dejar_de_gestionar_hotel,
+
             Vista.HotelesHabitacionesListar: vista_hotel_habitaciones_listar,
             Vista.HabitacionModificar: vista_habitacion_modificar,
+
             Vista.Reservar: vista_reservar,
             Vista.ReservacionesListar: vista_reservaciones_listar,
             Vista.OrdenarReservaciones: vista_cambiar_orden_reservaciones,
@@ -123,11 +129,7 @@ def vista_menu(app: App, vista=None):
 def vista_gestionar_hotel(app: App, vista=None):
     """Gestionar el hotel"""
     if app.hotelSeleccionado is None:
-        app.hotelSeleccionado = seleccionar_opcion(
-        "Seleccione un hotel",
-        ["%d - %s" % (h.id, h.nombre) for h in app.hoteles],
-        list(app.hoteles),
-    )
+        app.hotelSeleccionado =  seleccionar_hotel(app.hoteles, "Seleccione un hotel")
 
     return Vista.Menu
 
@@ -151,6 +153,7 @@ def vista_hoteles_listar(app: App, vista=None):
 
     opciones = [
         ["Gestionar habitaciones de un hotel", Vista.HotelesHabitacionesListar],
+        ["Modificar un Hotel", Vista.HotelModificar],
         ["Registrar Hotel", Vista.RegistrarHotel],
         ["Volver al menú", Vista.Menu],
         ["Salir del sistema", Vista.Salir],
@@ -168,16 +171,45 @@ def vista_registrar_hotel(app: App, vista=None):
     return vista or Vista.RegistrarHotel
 
 
+def vista_hotel_modificar(app: App, vista=None):
+    """Muestra la vista de modificar un hotel"""
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles, "Seleccione un hotel")
+
+    original_nombre = hotel.nombre
+    original_direccion = hotel.direccion
+    original_telefono = hotel.telefono
+
+    print_info("Datos del hotel (no puede modificar el id):")
+    print_info("         id:", hotel.id)
+    print_info("     nombre:", hotel.nombre)
+    print_info("  dirección:", hotel.direccion)
+    print_info("   teléfono:", hotel.telefono)
+
+    hotel.nombre = leer_str(f"Indique la nueva nombre (deje en blanco para no modificar):", predeterminado=hotel.nombre)
+    hotel.direccion = leer_str(f"Indique la nueva dirección (deje en blanco para no modificar):", predeterminado=hotel.direccion)
+    hotel.telefono = leer_str(f"Indique la nueva teléfono (deje en blanco para no modificar):", predeterminado=hotel.telefono)
+
+    if hotel.nombre != original_nombre or hotel.direccion != original_direccion or hotel.telefono != original_telefono:
+        print_info("Hotel modificado")
+        app.persistir()
+
+    if app.hotelSeleccionado is None:
+        return Vista.HotelesListar
+
+    return Vista.HotelesHabitacionesListar
+
+
 def vista_hotel_habitaciones_listar(app: App, vista=None):
     """Muestra las habitaciones de un hotel"""
 
-    vista_gestionar_hotel(app)
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles, "Seleccione un hotel")
 
-    print_seccion(app.cadenaHotelera + " - Habitaciones de " + app.hotelSeleccionado.nombre)
+    print_seccion(app.cadenaHotelera + " - Habitaciones de " + hotel.nombre)
 
-    print_tabla_habitaciones(app.hotelSeleccionado)
+    print_tabla_habitaciones(hotel)
 
     opciones = [
+        ["Modificar hotel", Vista.HotelModificar],
         ["Modificar habitación", Vista.HabitacionModificar],
         ["Volver al menú", Vista.Menu],
         ["Salir del sistema", Vista.Salir],
@@ -194,13 +226,13 @@ def vista_hotel_habitaciones_listar(app: App, vista=None):
 def vista_habitacion_modificar(app: App, vista=None):
     """Muestra la vista de modificar un tipo habitación"""
 
-    vista_gestionar_hotel(app)
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles, "Seleccione un hotel")
 
-    print_seccion(app.cadenaHotelera + " - Modificar una habitación de " + app.hotelSeleccionado.nombre)
+    print_seccion(app.cadenaHotelera + " - Modificar una habitación de " + hotel.nombre)
     habitacion = seleccionar_opcion(
         "Seleccione un tipo de habitación",
-        ["%s capacidad=%d precio=%.2f" % (h.nombre, h.capacidad, h.precio) for h in app.hotelSeleccionado.habitacionesTipos.values()],
-        [h for h in app.hotelSeleccionado.habitacionesTipos.values()],
+        ["%s capacidad=%d precio=%.2f" % (h.nombre, h.capacidad, h.precio) for h in hotel.habitacionesTipos.values()],
+        [h for h in hotel.habitacionesTipos.values()],
     )
 
     original_nombre = habitacion.nombre
@@ -208,7 +240,7 @@ def vista_habitacion_modificar(app: App, vista=None):
     original_precio = habitacion.precio
 
     print_info("Datos de la habitación (no puede modificar el código):")
-    print(habitacion)
+    # print(habitacion)
     print_info("     código:", habitacion.codigo)
     print_info("     nombre:", habitacion.nombre)
     print_info("  capacidad:", habitacion.capacidad)
@@ -220,7 +252,7 @@ def vista_habitacion_modificar(app: App, vista=None):
 
     if original_capacidad != habitacion.capacidad and original_nombre != habitacion.nombre and abs(original_precio - habitacion.precio) > 0.001:
         print_info("Habitación modificada")
-        print_info("%r".format(habitacion))
+        # print_info("%r".format(habitacion))
         app.persistir()
 
     if app.hotelSeleccionado is None:
@@ -232,8 +264,9 @@ def vista_habitacion_modificar(app: App, vista=None):
 def vista_reservar(app: App, vista=None):
     """Muestra la vista de reservar"""
 
-    vista_gestionar_hotel(app)
-    print_seccion(app.cadenaHotelera + " - Reservar habitación en " + app.hotelSeleccionado.nombre)
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles, "Seleccione un hotel")
+
+    print_seccion(app.cadenaHotelera + " - Reservar habitación en " + hotel.nombre)
 
     fecha_inicial = leer_date("Indique la fecha en la que desea llegar")
     fecha_final = leer_date("Indique la fecha en la que desea salir")
