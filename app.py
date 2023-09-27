@@ -1,8 +1,6 @@
 import datetime
-from enum import IntEnum, auto
 import json
 import os
-from typing import List, Dict
 from config import CURRENT_DIR, Config
 from data import Cliente, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
 import csv
@@ -121,6 +119,8 @@ class App:
                     personas_count,
                     observaciones,
                 ) = row
+                id = int(id)
+                hotel_id = int(hotel_id)
                 fecha_entrada = datetime.datetime.strptime(fecha_entrada, "%Y-%m-%d")
                 fecha_salida = datetime.datetime.strptime(fecha_salida, "%Y-%m-%d")
                 hora_entrada = datetime.datetime.strptime(hora_entrada, "%H:%M").time()
@@ -359,46 +359,6 @@ class App:
 
         return r
 
-    def run(self):
-        """Ejecuta el TUI de la aplicación"""
-
-        print_titulo("Bienvenido al sistema de gestión de la cadena '%s'" % self.cadenaHotelera)
-
-        vista = Vista.Menu
-
-        while True:
-            if vista is Vista.Salir:
-                return
-
-            elif vista is Vista.Menu:
-                vista = vista_menu(self, vista)
-
-            elif vista is Vista.HotelesListar:
-                vista = vista_hoteles_listar(self, vista)
-            
-            elif vista is Vista.HotelesVerHabitaciones:
-                vista = vista_ver_habitaciones(self, vista)
-
-            elif vista is Vista.ReservacionesListar:
-                vista = vista_reservaciones_listar(self, vista)
-
-            elif vista is Vista.Reservar:
-                vista = vista_reservar(self, vista)
-
-            elif vista is Vista.ReservacionesReporteDelPeriodo:
-                vista = vista_reservaciones_reporte_del_periodo(self, vista)
-
-            elif vista is Vista.ReservacionesReporteMejoresClientes:
-                vista = vista_reservaciones_reporte_mejores_clientes(self, vista)
-
-            elif vista is Vista.ReservacionesReporteDuracion:
-                vista = vista_reservaciones_reporte_duracion_estadias(self, vista)
-
-            else:
-                return
-
-            print("-" * 80, end="\n\n")
-
     def format_ordenamiento(self):
         """Formatea el ordenamiento"""
         return ", ".join(
@@ -409,7 +369,13 @@ class App:
     def reservaciones_ordenadas(self):
         """Ordena las reservaciones"""
 
-        ordenados = list(self.reservaciones)
+        ordenados = None
+        if self.hotelSeleccionado is not None:
+            ordenados = filter(lambda r: r.hotel_id == self.hotelSeleccionado.id, self.reservaciones)
+        else:
+            ordenados = self.reservaciones
+        ordenados = list(ordenados)
+
         if len(self.ordenamiento) > 0:
             for ordenamiento in self.ordenamiento[::-1]:
                 getter = PARAMETROS_ORDEN[abs(ordenamiento)][1]
@@ -422,305 +388,3 @@ class App:
                     ordenados = [r.data for r in ordenables]
 
         return ordenados
-
-
-### Vistas ###
-
-class Vista(IntEnum):
-    """Vistas del TUI"""
-
-    Menu = auto()
-
-    HotelesListar = auto()
-    RegistrarHotel = auto()
-    HotelesVerHabitaciones = auto()
-
-    Reservar = auto()
-    ReservacionesListar = auto()
-    ReservacionesReporteDelPeriodo = auto()
-    ReservacionesReporteMejoresClientes = auto()
-    ReservacionesReporteDuracion = auto()
-
-    Salir = auto()
-
-    def label(self):
-        return {
-            Vista.Salir: "Salir",
-            Vista.Menu: "Menu",
-
-            Vista.HotelesListar: "Ver Hoteles",
-
-            Vista.Reservar: "Reservar",
-            Vista.ReservacionesListar: "Ver Reservaciones",
-            Vista.ReservacionesReporteDelPeriodo: "Reporte: reservaciones en período",
-            Vista.ReservacionesReporteMejoresClientes: "Reporte: mejores clientes",
-            Vista.ReservacionesReporteDuracion: "Reporte: duración de estadías",
-        }[self]
-
-    @staticmethod
-    def menu():
-        return [
-            Vista.HotelesListar,
-            # Vista.RegistrarHotel,
-            Vista.Reservar,
-            Vista.ReservacionesListar,
-            Vista.ReservacionesReporteDelPeriodo,
-            Vista.ReservacionesReporteMejoresClientes,
-            Vista.ReservacionesReporteDuracion,
-            Vista.Salir,
-        ]
-
-def vista_menu(app: App, vista=None):
-    """Muestra el menú principal"""
-
-    print_seccion(app.cadenaHotelera + " - Menú")
-
-    vista = seleccionar_opcion(
-        "Seleccione una operación",
-        [v.label() for v in Vista.menu()],
-        [v for v in Vista.menu()],
-    )
-
-    return Vista(vista)
-
-def seleccionar_orden(app: App):
-    while True:
-        print_info(
-            "Estos son los parámetros por los que puede ordenar la lista:"
-        )
-        for p in PARAMETROS_ORDEN:
-            print(f"  - [{p}] {PARAMETROS_ORDEN[p][0]}")
-
-        print_info("Indique el nro. de la opción para ordenar de forma ascendente y el nro. negativo para ordenar de forma descendente")
-        print_info("Puede indicar varios valores separados por comas para ordenar por más de un parámetro de la forma '1, 2, -3'")
-        orden = leer_str("Indique el orden o presione <enter> sin escribir nada para volver a la lista:")
-        if len(orden) == 0:
-            return True
-
-        try:
-            orden = [int(o) for o in filter(lambda s: len(s) > 0, orden.split(","))]
-        except ValueError:
-            print_error("No se pudo procesar la entrada como parámetro de orden")
-            continue
-
-        app.ordenamiento = list(
-            filter(
-                lambda o: abs(o) in PARAMETROS_ORDEN,
-                orden,
-            )
-        )
-
-        print_info("Nuevo orden:", app.format_ordenamiento())
-
-        break
-
-    return True
-
-
-def vista_hoteles_listar(app: App, vista=None):
-    """Muestra los hoteles"""
-
-    print_seccion(app.cadenaHotelera + " - Hoteles")
-
-    app.hotelSeleccionado = None
-    
-    print_tabla_hoteles(list(app.hoteles))
-
-    opciones = [
-        ["Ver habitaciones", Vista.HotelesVerHabitaciones],
-        # ["Registrar Hotel", Vista.RegistrarHotel],
-        ["Volver al menú", Vista.Menu],
-        ["Salir del sistema", Vista.Salir],
-    ]
-    vista = seleccionar_opcion(
-        "Seleccione una operación",
-        [o[0] for o in opciones],
-        [o[1] for o in opciones],
-    )
-
-    return vista or Vista.Menu
-
-
-def vista_ver_habitaciones(app: App, vista=None):
-    """Muestra las habitaciones de un hotel"""
-
-    app.hotelSeleccionado = seleccionar_opcion(
-        "Seleccione un hotel",
-        ["%d - %s" % (h.id, h.nombre) for h in app.hoteles],
-        list(app.hoteles),
-    )
-
-    print_seccion(app.cadenaHotelera + " - Habitaciones de " + app.hotelSeleccionado.nombre)
-
-    print_tabla_habitaciones(app.hotelSeleccionado)
-
-    opciones = [
-        # ["Ver habitaciones", Vista.HotelesVerHabitaciones],
-        # ["Registrar Hotel", Vista.RegistrarHotel],
-        ["Volver al menú", Vista.Menu],
-        ["Salir del sistema", Vista.Salir],
-    ]
-    vista = seleccionar_opcion(
-        "Seleccione una operación",
-        [o[0] for o in opciones],
-        [o[1] for o in opciones],
-    )
-
-    return vista or Vista.Menu
-
-def vista_reservar(app: App, vista=None):
-    """Muestra la vista de reservar"""
-    print_seccion(app.cadenaHotelera + " - Reservar")
-
-    fecha_inicial = leer_date("Indique la fecha en la que desea llegar")
-    fecha_final = leer_date("Indique la fecha en la que desea salir")
-    personas_count = leer_numero("Indique el número de personas que se quedarán", 1)
-
-    reservaciones_del_periodo = set(
-        r.habitacion
-        for r in app.get_reservaciones_por_periodo(fecha_inicial, fecha_final)
-    )
-    tipos_utiles = [t for t in HabitacionTipo if t.capacidad() >= personas_count]
-
-    habitaciones_disponibles = []
-    for h, tipo in app.habitaciones.items():
-        if h not in reservaciones_del_periodo and tipo in tipos_utiles:
-            habitaciones_disponibles.append(h)
-
-    if len(habitaciones_disponibles) < 0:
-        print_info(
-            "No tenemos habitaciones disponibles en ese período para esa cantidad de personas"
-        )
-        return Vista.Menu
-
-    print_info("Tenemos habitaciones disponibles")
-    for tipo, precio in app.precios.items():
-        if tipo not in tipos_utiles:
-            continue
-        print(f"  - {HabitacionTipo(tipo).label()} en {precio}")
-
-    if not leer_si_no(
-        "¿Desa proceder con la reservación con alguna de estas opciones?"
-    ):
-        return Vista.Menu
-
-    tipo_seleccionado = seleccionar_opcion(
-        "Indique el tipo de habitación",
-        [HabitacionTipo(tipo).label() for tipo in tipos_utiles],
-        tipos_utiles,
-    )
-
-    duracion_dias = (fecha_final - fecha_inicial).days
-    precio = duracion_dias * app.precios[tipo_seleccionado]
-
-    habitacion = None
-    for h in habitaciones_disponibles:
-        if app.tipo_habitacion(h) == tipo_seleccionado:
-            habitacion = h
-            break
-
-    if not leer_si_no(
-        f"Sería un total de {precio} por la habitación {habitacion} por {duracion_dias} día(s) ¿Desa proceder?"
-    ):
-        return vista or Vista.Menu
-
-    ci = "{:0>8}".format(leer_numero("Indique la C.I. del cliente"))
-    if ci in app.clientes:
-        print_info("Este cliente ya está registrado.")
-        print_info(app.clientes[ci].nombre)
-    else:
-        print_info("Este cliente no esta registrado. Vamos a solucionarlo.")
-        nombre = leer_str("¿Cuál es el nombre del cliente?")
-        email = leer_email("¿Cuál es el email del cliente?")
-
-        app.clientes[ci] = Cliente(ci, nombre, email)
-        print_info("Cliente registrado.")
-
-    observaciones = leer_str(
-        "¿Alguna observación sobre de la reservación? (presione <enter> para dejar el campo vacío)"
-    )
-    if observaciones == "":
-        observaciones = None
-
-    reservacion = app.crear_reservacion(
-        ci,
-        habitacion,
-        fecha_inicial,
-        fecha_final,
-        personas_count=personas_count,
-        observaciones=observaciones,
-    )
-
-    print_info("Reservación registrada")
-    print(reservacion)
-
-    return Vista.Menu
-
-def vista_reservaciones_listar(app: App, vista=None):
-    """Muestra las reservaciones"""
-
-    print_seccion(app.cadenaHotelera + " - Reservaciones")
-
-    opciones = [
-        ["Ordenar", seleccionar_orden],
-        ["Volver al menú", lambda _: False],
-    ]
-
-    while True:
-        print_info(
-            "Reservaciones ordenadas:",
-            app.format_ordenamiento(),
-        )
-        print_tabla_reservaciones(app.reservaciones_ordenadas())
-
-        accion = seleccionar_opcion(
-            "Seleccione una operación",
-            [o[0] for o in opciones],
-            [o[1] for o in opciones],
-        )
-
-        if not accion(app):
-            return Vista.Menu
-
-    return vista or Vista.ReservacionesListar
-
-def vista_reservaciones_reporte_del_periodo(app: App, vista=None):
-    """Muestra el reporte del período"""
-
-    print_seccion(app.cadenaHotelera + " - Reporte del período")
-    reservaciones = app.reporte_en_periodo(
-        leer_date("Ingrese fecha inicial"),
-        leer_date("Ingrese fecha final"),
-        not leer_si_no("¿Desea orden descendente?"),
-    )
-
-    print_tabla_reservaciones(reservaciones)
-    input("Presione <enter> para volver al menú > ")
-
-    return Vista.Menu
-
-def vista_reservaciones_reporte_mejores_clientes(app: App, vista=None):
-    print_seccion(app.cadenaHotelera + " - Reporte de Mejores clientes")
-
-    mejores_clientes = app.reporte_cant_reservaciones(
-        not leer_si_no("¿Desea orden descendente?")
-    )
-
-    print_tabla_mejores_clientes(mejores_clientes)
-
-    input("Presione <enter> para volver al menú > ")
-
-    return Vista.Menu
-
-def vista_reservaciones_reporte_duracion_estadias(app: App, vista=None):
-    print_seccion(app.cadenaHotelera + " - Reporte de estadías")
-
-    reservaciones = app.reporte_estadia(
-        not leer_si_no("¿Desea orden descendente?")
-    )
-
-    print_tabla_reservaciones(reservaciones)
-    input("Presione <enter> para volver al menú > ")
-
-    return Vista.Menu
-

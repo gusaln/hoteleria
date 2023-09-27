@@ -14,7 +14,7 @@ class HabitacionTipo():
         self.precio = precio
 
     def __repr__(self):
-        return "<HabitacionTipo %s capacidad=%d precio=%f>" % (self.nombre, self.capacidad, self.precio)
+        return "<Habitación código={0.codigo} nombre={0.nombre} capacidad={0.capacidad} precio={0.precio:.2f}>".format(self)
 
 
 class Hotel():

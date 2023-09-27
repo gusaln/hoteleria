@@ -22,6 +22,8 @@ def print_titulo(titulo):
 
 def print_seccion(*seccion):
     """Imprime el encabezado de una sección"""
+    
+    print()
     print(":::", *seccion)
 
 
@@ -31,7 +33,7 @@ def print_info(*info):
     print("-->", *info)
 
 
-def leer_str(mensaje=None, prompt="> "):
+def leer_str(mensaje=None, prompt="> ", predeterminado = None):
     """Lee un string
 
     Esta función imprime un mensaje de haber uno, salta una línea y espera la entrada del usuario
@@ -42,7 +44,11 @@ def leer_str(mensaje=None, prompt="> "):
     if not prompt.endswith("> "):
         prompt = prompt + "> "
 
-    return input(prompt).strip()
+    s = input(prompt).strip()
+    if s == "" and predeterminado is not None:
+        return predeterminado
+
+    return s
 
 
 email_pattern = re.compile(
@@ -60,7 +66,7 @@ def leer_email(mensaje=None):
         print_error("Email inválido")
 
 
-def leer_numero(mensaje=None, predeterminado=None):
+def leer_int(mensaje=None, predeterminado=None):
     """Lee un valor entero"""
     while True:
         try:
@@ -73,6 +79,18 @@ def leer_numero(mensaje=None, predeterminado=None):
         except ValueError:
             print_error("Debe indicar un número")
 
+def leer_float(mensaje=None, predeterminado=None):
+    """Lee un valor entero"""
+    while True:
+        try:
+            s = leer_str(mensaje)
+
+            if predeterminado is not None and s == "":
+                return predeterminado
+
+            return float(s)
+        except ValueError:
+            print_error("Debe indicar un número")
 
 def leer_si_no(mensaje):
     """Lee un boolean"""
@@ -98,7 +116,7 @@ def seleccionar_opcion(mensaje: str, opciones, valores=[]):
         for i, o in enumerate(opciones):
             print(f"  [{i+1}] {o}")
 
-        raw = leer_numero()
+        raw = leer_int()
         if raw > 0 and raw <= len(opciones):
             return valores[raw - 1]
         print_error("Opción inválida")
