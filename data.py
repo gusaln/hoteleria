@@ -53,10 +53,10 @@ class Hotel():
         """Devuelve si la habitación existe."""
         return habitacion in self.habitaciones
 
-    def tipo_habitacion(self, habitacion: str):
+    def tipo_habitacion(self, habitacion: str) -> HabitacionTipo:
         """Devuelve el tipo de la habitación."""
         if self.tiene_habitacion(habitacion):
-            return self.habitaciones[habitacion]
+            return self.habitacionesTipos[self.habitaciones[habitacion]]
         return None
 
 
@@ -147,3 +147,20 @@ class Reservacion:
             personas_count=self.personas_count,
             observaciones=self.observaciones or "-",
         )
+
+
+class Actividad():
+    """Representa una actividad."""
+
+    def __init__(self, evento: str, data: dict = {}, esError: bool = False, fecha: datetime.datetime = None) -> None:
+        self.evento = evento
+        self.data = data
+        self.esError = esError
+        self.fecha = fecha or datetime.datetime.now()
+
+    def tipo(self):
+        """Devuelve el tipo de la actividad."""
+        if self.esError:
+            return "error"
+
+        return "info"

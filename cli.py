@@ -62,7 +62,7 @@ class Vista(IntEnum):
         return {
             Vista.Menu: vista_menu,
             Vista.HotelesListar: vista_hoteles_listar,
-            Vista.RegistrarHotel: vista_registrar_hotel,
+            # Vista.RegistrarHotel: vista_registrar_hotel,
             Vista.HotelModificar: vista_hotel_modificar,
 
             Vista.GestionarHotel: vista_gestionar_hotel,
@@ -87,7 +87,7 @@ class Vista(IntEnum):
         """Retorna las vistas en el menú principal"""
         return [
             Vista.HotelesListar,
-            Vista.RegistrarHotel,
+            # Vista.RegistrarHotel,
             Vista.GestionarHotel,
             Vista.Reservar,
             Vista.ReservacionesListar,
@@ -204,7 +204,7 @@ def vista_hotel_modificar(app: App, vista=None):
 
     if hotel.nombre != original_nombre or hotel.direccion != original_direccion or hotel.telefono != original_telefono:
         print_info("Hotel modificado")
-        app.persistir()
+        app.registrar_actividad("Hotel modificado", data={"id": hotel.id, "nombre": hotel.nombre, "direccion": hotel.direccion, "telefono": hotel.telefono})
 
     if app.hotelSeleccionado is None:
         return Vista.HotelesListar
@@ -265,8 +265,7 @@ def vista_habitacion_modificar(app: App, vista=None):
 
     if original_capacidad != habitacion.capacidad and original_nombre != habitacion.nombre and abs(original_precio - habitacion.precio) > 0.001:
         print_info("Habitación modificada")
-        # print_info("%r".format(habitacion))
-        app.persistir()
+        app.registrar_actividad("Habitación modificada", data={"hotel_id": hotel.id, "codigo": habitacion.codigo, "nombre": habitacion.nombre, "capacidad": habitacion.capacidad, "precio": habitacion.precio})
 
     if app.hotelSeleccionado is None:
         return Vista.HotelesListar
@@ -289,12 +288,14 @@ def vista_reservar(app: App, vista=None):
         r.habitacion
         for r in app.get_reservaciones_por_periodo(fecha_inicial, fecha_final)
     )
-    tipos_utiles = [t for t in HabitacionTipo if t.capacidad() >= personas_count]
+    tipos_utiles = dict((codigo, t) for codigo, t in hotel.habitacionesTipos.items() if t.capacidad >= personas_count)
 
-    habitaciones_disponibles = []
-    for h, tipo in app.habitaciones.items():
+    habitaciones_disponibles = set()
+    tipos_disponibles = set()
+    for h, tipo in hotel.habitaciones.items():
         if h not in reservaciones_del_periodo and tipo in tipos_utiles:
-            habitaciones_disponibles.append(h)
+            habitaciones_disponibles.add(h)
+            tipos_disponibles.add(hotel.habitacionesTipos[tipo])
 
     if len(habitaciones_disponibles) < 0:
         print_info(
@@ -303,30 +304,32 @@ def vista_reservar(app: App, vista=None):
         return Vista.Menu
 
     print_info("Tenemos habitaciones disponibles")
-    for tipo, precio in app.precios.items():
-        if tipo not in tipos_utiles:
-            continue
-        print(f"  - {HabitacionTipo(tipo).label()} en {precio}")
+    for tipo in tipos_disponibles:
+        print(f"  - {tipo.nombre} en {tipo.precio}")
 
     if not leer_si_no(
         "¿Desa proceder con la reservación con alguna de estas opciones?"
     ):
         return Vista.Menu
 
-    tipo_seleccionado = seleccionar_opcion(
+    tipo_seleccionado = list(tipos_disponibles)[0] if len(tipos_disponibles) < 2 else seleccionar_opcion(
         "Indique el tipo de habitación",
-        [HabitacionTipo(tipo).label() for tipo in tipos_utiles],
-        tipos_utiles,
+        ["{0.nombre} :: {0.precio:.2f} por noche".format(tipo) for tipo in tipos_utiles.values()],
+        list(tipos_disponibles),
     )
 
     duracion_dias = (fecha_final - fecha_inicial).days
-    precio = duracion_dias * app.precios[tipo_seleccionado]
+    precio = duracion_dias * tipo_seleccionado.precio
 
     habitacion = None
     for h in habitaciones_disponibles:
-        if app.tipo_habitacion(h) == tipo_seleccionado:
+        # print(hotel.tipo_habitacion(h), tipo_seleccionado)
+        if hotel.tipo_habitacion(h) == tipo_seleccionado:
             habitacion = h
             break
+
+    if habitacion is None:
+        raise RuntimeError("Habitación no fue asignada")
 
     if not leer_si_no(
         f"Sería un total de {precio} por la habitación {habitacion} por {duracion_dias} día(s) ¿Desa proceder?"
@@ -352,6 +355,7 @@ def vista_reservar(app: App, vista=None):
         observaciones = None
 
     reservacion = app.crear_reservacion(
+        hotel,
         ci,
         habitacion,
         fecha_inicial,
@@ -385,6 +389,7 @@ def vista_reservacion_modificar(app: App, vista=None):
 
     if leer_si_no(f"¿Desea cambiar la reservación a '{estado}'?"):
         reservacion.estado = ReservacionEstado(estado)
+        app.registrar_actividad("Reservación modificada", data={"id": reservacion.id, "estado": estado})
         print_info("Reservación modificada")
 
     return Vista.Menu

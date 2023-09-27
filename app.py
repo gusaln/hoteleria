@@ -2,9 +2,9 @@ import datetime
 import json
 import os
 from config import CURRENT_DIR, Config
-from data import Cliente, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
+from data import Actividad, Cliente, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
 import csv
-from listas import Queue
+from listas import Queue, Stack
 
 from ordenamiento import Ordenable, heapsort, mergesort, quicksort, shellsort
 from term import *
@@ -41,6 +41,7 @@ class App:
         self.hoteles = Queue()
         self.clientes = {}
         self.reservaciones = Queue()
+        self.actividades = Stack()
 
         # Esta línea es para ayudar al IDE a entender que aquí va a un Hotel
         self.hotelSeleccionado = Hotel(0, "", "", {}, {})
@@ -144,7 +145,28 @@ class App:
                     )
                 )
 
-        # self.hotelSeleccionado = self.hoteles.peek()
+        actividades_file_path = os.path.abspath(self.config.archivo_actividades)
+        if not os.path.exists(actividades_file_path):
+            return
+
+        with open(actividades_file_path) as fp:
+            for row in csv.reader(
+                fp.readlines(),
+                delimiter=";",
+                lineterminator="\n",
+                quoting=csv.QUOTE_MINIMAL,
+            ):
+                (
+                    fecha,
+                    evento,
+                    esError,
+                    data,
+                ) = row
+                fecha = datetime.datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S")
+                esError = bool(esError)
+                data = json.loads(data)
+
+                self.actividades.stack(Actividad(evento, data, esError, fecha=fecha))
 
         print_info("Datos cargados")
 
@@ -156,6 +178,7 @@ class App:
         clientes_file_path = os.path.abspath(self.config.archivo_clientes)
         hoteles_file_path = os.path.abspath(self.config.archivo_hoteles)
         reservaciones_file_path = os.path.abspath(self.config.archivo_reservaciones)
+        actividades_file_path = os.path.abspath(self.config.archivo_actividades)
 
         with open(clientes_file_path, "w") as fp:
             csvwriter = csv.writer(
@@ -203,6 +226,25 @@ class App:
                         precio,
                         personas_count,
                         observaciones,
+                    )
+                )
+
+        with open(actividades_file_path, "w") as fp:
+            csvwriter = csv.writer(
+                fp, delimiter=";", lineterminator="\n", quoting=csv.QUOTE_MINIMAL
+            )
+
+            for actividades in self.actividades:
+                fecha = actividades.fecha.strftime("%Y-%m-%d %H:%M:%S")
+                evento = actividades.evento
+                esError = actividades.esError
+                data = json.dumps(actividades.data)
+                csvwriter.writerow(
+                    (
+                        fecha,
+                        evento,
+                        esError,
+                        data,
                     )
                 )
 
@@ -325,6 +367,7 @@ class App:
 
     def crear_reservacion(
         self,
+        hotel: Hotel,
         cliente_ci: str,
         habitacion: str,
         fecha_entrada: datetime.datetime,
@@ -336,12 +379,12 @@ class App:
     ) -> Reservacion:
         """Crea una nueva reservación."""
 
-        precio_por_dia = self.precios[self.habitaciones[habitacion]]
+        precio_por_dia = hotel.habitacionesTipos[hotel.habitaciones[habitacion]].precio
         duracion_dias = (fecha_salida - fecha_entrada).days
         precio = precio_por_dia * duracion_dias
 
         r = Reservacion(
-            self.hotelSeleccionado.id,
+            hotel.id,
             self.clientes[cliente_ci],
             habitacion,
             ReservacionEstado.Pendiente,
@@ -355,9 +398,45 @@ class App:
         )
 
         self.reservaciones.push(r)
+        self.registrar_actividad("Reservación creada", {
+            "id": r.id,
+            "hotel_id": r.hotel_id,
+            "cliente_ci": r.cliente.ci,
+            "habitacion": r.habitacion,
+            "fecha_entrada": r.fecha_entrada.strftime("%d/%m/%Y"),
+            "fecha_salida": r.fecha_salida.strftime("%d/%m/%Y"),
+            "hora_entrada": r.hora_entrada.strftime("%H:%M"),
+            "hora_salida": r.hora_salida.strftime("%H:%M"),
+            "personas_count": r.personas_count,
+            "observaciones": r.observaciones
+        })
         self.persistir()
 
         return r
+
+    def registrar_actividad(
+        self,
+        evento: str,
+        data: dict = {},
+    ) -> Actividad:
+        
+        a = Actividad(evento, data)
+        self.actividades.stack(a)
+        self.persistir()
+
+        return a
+
+    def registrar_error(
+        self,
+        evento: str,
+        data: dict = {},
+    ) -> Actividad:
+        
+        a = Actividad(evento, data, esError=True)
+        self.actividades.stack(a)
+        self.persistir()
+
+        return a
 
     def get_reservaciones_del_hotel(self, hotel_id: int) -> List[Reservacion]:
         """Devuelve las reservaciones de un hotel."""
@@ -368,6 +447,18 @@ class App:
         """Elimina una reservación."""
 
         self.reservaciones.remove_when(lambda r: r.id == reservacion.id)
+        self.registrar_actividad("Reservación eliminada", {
+            "id": reservacion.id,
+            "hotel_id": reservacion.hotel_id,
+            "cliente_ci": reservacion.cliente.ci,
+            "habitacion": reservacion.habitacion,
+            "fecha_entrada": reservacion.fecha_entrada.strftime("%d/%m/%Y"),
+            "fecha_salida": reservacion.fecha_salida.strftime("%d/%m/%Y"),
+            "hora_entrada": reservacion.hora_entrada.strftime("%H:%M"),
+            "hora_salida": reservacion.hora_salida.strftime("%H:%M"),
+            "personas_count": reservacion.personas_count,
+            "observaciones": reservacion.observaciones
+        })
         self.persistir()
 
     def format_ordenamiento(self):
