@@ -5,10 +5,14 @@ from data import Cliente, Hotel, MejorCliente, Reservacion
 import re
 
 
-def print_error(m):
+def print_error(*mensajes):
     """Imprime un error"""
-    print("!!!" + m)
+    print("!!!", *mensajes)
 
+
+def print_debug(*mensajes):
+    """Imprime un mensaje de DEBUG"""
+    print("[DEBUG]", *mensajes)
 
 def print_titulo(titulo):
     """Imprime un título"""

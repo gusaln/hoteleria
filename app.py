@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+from typing import Dict
 from config import CURRENT_DIR, Config
 from data import Actividad, Cliente, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
 import csv
@@ -150,6 +151,7 @@ class App:
             return
 
         with open(actividades_file_path) as fp:
+            actividades = []
             for row in csv.reader(
                 fp.readlines(),
                 delimiter=";",
@@ -166,7 +168,9 @@ class App:
                 esError = bool(esError)
                 data = json.loads(data)
 
-                self.actividades.stack(Actividad(evento, data, esError, fecha=fecha))
+                actividades.append(Actividad(evento, data, esError, fecha=fecha))
+            for a in reversed(actividades):
+                self.actividades.stack(a)
 
         print_info("Datos cargados")
 
@@ -275,23 +279,68 @@ class App:
 
         return HabitacionTipo(self.habitaciones[habitacion]).capacidad()
 
-    def tiene_habitacion(self, habitacion: str):
+    def tiene_habitacion(self, habitacion: str, hotel: Hotel = None):
         """Devuelve si la habitación existe."""
-        return self.hotelSeleccionado is not None and self.hotelSeleccionado.tiene_habitacion(habitacion)
+        hotel = hotel or self.hotelSeleccionado
 
-    def tipo_habitacion(self, habitacion: str):
+        return hotel is not None and self.hotelSeleccionado.tiene_habitacion(habitacion)
+
+    def tipo_habitacion(self, habitacion: str, hotel: Hotel = None):
         """Devuelve el tipo de la habitación."""
-        if self.hotelSeleccionado is not None:
-            return self.hotelSeleccionado.tipo_habitacion(habitacion)
+        hotel = hotel or self.hotelSeleccionado
+
+        if hotel is not None:
+            return hotel.tipo_habitacion(habitacion)
         return None
 
+    def get_habitaciones_disponibles_en_periodo(
+        self, 
+        fecha_inicial: datetime.datetime, 
+        fecha_final: datetime.datetime, 
+        hotel: Hotel = None
+    ) -> Dict[str, List[str]]:
+        """
+        Devuelve las habitaciones disponibles en el rango de fechas.
+        
+        :return: Un `dict` con las habitaciones disponibles agrupadas por el código del tipo.
+        """
+        hotel = hotel or self.hotelSeleccionado
+        if hotel is None:
+            return {}
+
+        reservaciones_del_periodo = set(
+            r.habitacion
+            for r in self.get_reservaciones_por_periodo(fecha_inicial, fecha_final, hotel)
+        )
+        
+        disponibles = {}
+
+        for habitacion in hotel.habitaciones:
+            if habitacion in reservaciones_del_periodo:
+                continue
+
+            tipo = hotel.tipo_habitacion(habitacion)
+            if tipo.codigo not in disponibles:
+                disponibles[tipo.codigo] = [habitacion]
+            else:
+                disponibles[tipo.codigo].append(habitacion)
+
+        return disponibles
+
     def get_reservaciones_por_periodo(
-        self, fecha_inicial: datetime.datetime, fecha_final: datetime.datetime
+        self, 
+        fecha_inicial: datetime.datetime, 
+        fecha_final: datetime.datetime, 
+        hotel: Hotel = None
     ):
         """Devuelve las reservaciones que se encuentran en el rango de fechas."""
 
+        hotel = hotel or self.hotelSeleccionado
+        if hotel is None:
+            return []
+
         return filter(
-            lambda r: r.fecha_entrada < fecha_final and r.fecha_salida > fecha_inicial,
+            lambda r: r.hotel_id == hotel.id and r.fecha_entrada < fecha_final and r.fecha_salida > fecha_inicial,
             self.reservaciones,
         )
 

@@ -253,7 +253,7 @@ def vista_habitacion_modificar(app: App, vista=None):
     original_precio = habitacion.precio
 
     print_info("Datos de la habitación (no puede modificar el código):")
-    # print(habitacion)
+    # print_debug(habitacion)
     print_info("     código:", habitacion.codigo)
     print_info("     nombre:", habitacion.nombre)
     print_info("  capacidad:", habitacion.capacidad)
@@ -284,27 +284,27 @@ def vista_reservar(app: App, vista=None):
     fecha_final = leer_date("Indique la fecha en la que desea salir")
     personas_count = leer_int("Indique el número de personas que se quedarán", 1)
 
-    reservaciones_del_periodo = set(
-        r.habitacion
-        for r in app.get_reservaciones_por_periodo(fecha_inicial, fecha_final)
-    )
+    habitaciones_disponibles_bytipo = app.get_habitaciones_disponibles_en_periodo(fecha_inicial, fecha_final, hotel)
+    # print_debug("habitaciones_disponibles_bytipo", habitaciones_disponibles_bytipo)
+
     tipos_utiles = dict((codigo, t) for codigo, t in hotel.habitacionesTipos.items() if t.capacidad >= personas_count)
 
     habitaciones_disponibles = set()
     tipos_disponibles = set()
-    for h, tipo in hotel.habitaciones.items():
-        if h not in reservaciones_del_periodo and tipo in tipos_utiles:
-            habitaciones_disponibles.add(h)
-            tipos_disponibles.add(hotel.habitacionesTipos[tipo])
+    for tipo_codigo, habitaciones in habitaciones_disponibles_bytipo.items():
+        if tipo_codigo in tipos_utiles:
+            for h in habitaciones:
+                habitaciones_disponibles.add(h)
+            tipos_disponibles.add(hotel.habitacionesTipos[tipo_codigo])
 
-    if len(habitaciones_disponibles) < 0:
+    if len(habitaciones_disponibles) < 1:
         print_info(
             "No tenemos habitaciones disponibles en ese período para esa cantidad de personas"
         )
         return Vista.Menu
 
     print_info("Tenemos habitaciones disponibles")
-    for tipo in tipos_disponibles:
+    for tipo in sorted(tipos_disponibles, key=lambda t: t.precio):
         print(f"  - {tipo.nombre} en {tipo.precio}")
 
     if not leer_si_no(
@@ -321,9 +321,11 @@ def vista_reservar(app: App, vista=None):
     duracion_dias = (fecha_final - fecha_inicial).days
     precio = duracion_dias * tipo_seleccionado.precio
 
+    # print_debug("datos:", dict(tipo_seleccionado=tipo_seleccionado, duracion_dias=duracion_dias, precio=precio))
+
     habitacion = None
     for h in habitaciones_disponibles:
-        # print(hotel.tipo_habitacion(h), tipo_seleccionado)
+        # print_debug(hotel.tipo_habitacion(h), tipo_seleccionado)
         if hotel.tipo_habitacion(h) == tipo_seleccionado:
             habitacion = h
             break
@@ -334,7 +336,7 @@ def vista_reservar(app: App, vista=None):
     if not leer_si_no(
         f"Sería un total de {precio} por la habitación {habitacion} por {duracion_dias} día(s) ¿Desa proceder?"
     ):
-        return vista or Vista.Menu
+        return Vista.Menu
 
     ci = "{:0>8}".format(leer_int("Indique la C.I. del cliente"))
     if ci in app.clientes:
