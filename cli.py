@@ -22,6 +22,7 @@ class Vista(IntEnum):
 
     # Reservaciones
     Reservar = auto()
+    ReservacionCancelar = auto()
     ReservacionesListar = auto()
     OrdenarReservaciones = auto()
 
@@ -40,13 +41,16 @@ class Vista(IntEnum):
             Vista.RegistrarHotel: "Registrar hotel",
             Vista.HotelModificar: "Hotel modificar",
 
-            Vista.HabitacionModificar: "Modificar habitación",
             Vista.GestionarHotel: "Gestionar hotel",
             Vista.DejarDeGestionarHotel: "Dejar de gestionar este hotel",
+
             Vista.HotelesHabitacionesListar: "Gestionar habitaciones",
+            Vista.HabitacionModificar: "Modificar habitación",
 
             Vista.Reservar: "Reservar",
+            Vista.ReservacionCancelar: "Cancelar una reservación",
             Vista.ReservacionesListar: "Ver Reservaciones",
+
             Vista.ReservacionesReporteDelPeriodo: "Reporte: reservaciones en período",
             Vista.ReservacionesReporteMejoresClientes: "Reporte: mejores clientes",
             Vista.ReservacionesReporteDuracion: "Reporte: duración de estadías",
@@ -66,8 +70,10 @@ class Vista(IntEnum):
             Vista.HabitacionModificar: vista_habitacion_modificar,
 
             Vista.Reservar: vista_reservar,
+            Vista.ReservacionCancelar: vista_reservacion_cancelar,
             Vista.ReservacionesListar: vista_reservaciones_listar,
             Vista.OrdenarReservaciones: vista_cambiar_orden_reservaciones,
+
             Vista.ReservacionesReporteDelPeriodo: vista_reservaciones_reporte_del_periodo,
             Vista.ReservacionesReporteMejoresClientes: vista_reservaciones_reporte_mejores_clientes,
             Vista.ReservacionesReporteDuracion: vista_reservaciones_reporte_duracion_estadias,
@@ -82,6 +88,7 @@ class Vista(IntEnum):
             Vista.GestionarHotel,
             Vista.Reservar,
             Vista.ReservacionesListar,
+            Vista.ReservacionCancelar,
             Vista.ReservacionesReporteDelPeriodo,
             Vista.ReservacionesReporteMejoresClientes,
             Vista.ReservacionesReporteDuracion,
@@ -97,6 +104,7 @@ class Vista(IntEnum):
             Vista.DejarDeGestionarHotel,
             Vista.Reservar,
             Vista.ReservacionesListar,
+            Vista.ReservacionCancelar,
             Vista.ReservacionesReporteDelPeriodo,
             Vista.ReservacionesReporteMejoresClientes,
             Vista.ReservacionesReporteDuracion,
@@ -349,6 +357,24 @@ def vista_reservar(app: App, vista=None):
 
     print_info("Reservación registrada")
     print(reservacion)
+
+    return Vista.Menu
+
+
+def vista_reservacion_cancelar(app: App, vista=None):
+    """Muestra la vista de cancelar una reservación"""
+
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles)
+
+    print_seccion(app.cadenaHotelera + " - Cancelar Reservación en " + hotel.nombre)
+
+    reservacion = seleccionar_reservacion(app.get_reservaciones_del_hotel(hotel.id))
+    print_info("Reservación seleccionada:")
+    print(reservacion)
+
+    if leer_si_no("¿Desea cancelar esta reservación?"):
+        app.cancelar_reservacion(reservacion)
+        print_info("Reservación cancelada")
 
     return Vista.Menu
 

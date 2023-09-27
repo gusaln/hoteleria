@@ -125,14 +125,26 @@ def seleccionar_opcion(mensaje: str, opciones, valores=[]):
 
 # Operaciones específicas
 
-def seleccionar_hotel(hoteles: Iterable[Hotel], msg: str):
+def seleccionar_hotel(hoteles: Iterable[Hotel], msg: str = "Seleccione un hotel"):
     """Muestra un selector de hoteles"""
 
     hoteles = list(hoteles)
     return seleccionar_opcion(
-        msg,
+        msg or "Seleccione un hotel",
         ["%d - %s" % (h.id, h.nombre) for h in hoteles],
         hoteles,
+    )
+
+
+def seleccionar_reservacion(reservaciones: Iterable[Reservacion], msg: str = "Seleccione una reservación"):
+    """Muestra un selector de reservaciones"""
+
+    reservaciones = list(reservaciones)
+    fmt = "cliente={0.cliente.ci}; habitación={0.habitacion}; fechas={fecha_entrada} - {fecha_salida}"
+    return seleccionar_opcion(
+        msg or "Seleccione una reservación",
+        [fmt.format(r, fecha_entrada = r.format_fecha_entrada(), fecha_salida = r.format_fecha_salida()) for r in reservaciones],
+        reservaciones,
     )
 
 

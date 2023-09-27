@@ -119,7 +119,16 @@ class Reservacion:
         self.observaciones = observaciones
 
     def duracion(self):
+        """Devuelve la duración de la reservación."""
         return (self.fecha_salida - self.fecha_entrada).days
+
+    def format_fecha_entrada(self):
+        """Devuelve la fecha de entrada en formato legible."""
+        return self.fecha_entrada.strftime("%d/%m/%Y")
+
+    def format_fecha_salida(self):
+        """Devuelve la fecha de salida en formato legible."""
+        return self.fecha_salida.strftime("%d/%m/%Y")
 
     def __str__(self) -> str:
         return """Reservacion {id}:

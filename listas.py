@@ -23,11 +23,20 @@ class Queue():
         return self.cabeza
 
     def remove(self, valor):
-        actual = self.cabeza
+        self.remove_when(lambda v: v == valor)
 
-        while actual:
-            if actual.valor == valor:
-                self.cabeza = actual.siguiente
+    def remove_when(self, cb):
+        if self.cabeza is None:
+            return
+
+        actual = self.cabeza
+        if cb(actual.valor):
+            self.cabeza = actual.siguiente
+            return
+
+        while actual and actual.siguiente:
+            if cb(actual.siguiente.valor):
+                actual.siguiente = actual.siguiente.siguiente
                 self.longitud -= 1
             actual = actual.siguiente
 
