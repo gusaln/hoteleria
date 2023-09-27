@@ -364,8 +364,8 @@ class App:
 
         return list(filter(lambda r: r.hotel_id == hotel_id, self.reservaciones))
 
-    def cancelar_reservacion(self, reservacion: Reservacion):
-        """Cancela una reservación."""
+    def eliminar_reservacion(self, reservacion: Reservacion):
+        """Elimina una reservación."""
 
         self.reservaciones.remove_when(lambda r: r.id == reservacion.id)
         self.persistir()

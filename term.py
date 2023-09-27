@@ -140,7 +140,7 @@ def seleccionar_reservacion(reservaciones: Iterable[Reservacion], msg: str = "Se
     """Muestra un selector de reservaciones"""
 
     reservaciones = list(reservaciones)
-    fmt = "cliente={0.cliente.ci}; habitación={0.habitacion}; fechas={fecha_entrada} - {fecha_salida}"
+    fmt = "cliente={0.cliente.ci}; habitación={0.habitacion}; fechas={fecha_entrada} - {fecha_salida}; estado={0.estado}"
     return seleccionar_opcion(
         msg or "Seleccione una reservación",
         [fmt.format(r, fecha_entrada = r.format_fecha_entrada(), fecha_salida = r.format_fecha_salida()) for r in reservaciones],

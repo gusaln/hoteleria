@@ -1,7 +1,7 @@
 
 from enum import IntEnum, auto
 from app import PARAMETROS_ORDEN, App
-from data import HabitacionTipo
+from data import HabitacionTipo, ReservacionEstado
 from term import *
 
 class Vista(IntEnum):
@@ -22,7 +22,8 @@ class Vista(IntEnum):
 
     # Reservaciones
     Reservar = auto()
-    ReservacionCancelar = auto()
+    ReservacionEliminar = auto()
+    ReservacionModificar = auto()
     ReservacionesListar = auto()
     OrdenarReservaciones = auto()
 
@@ -37,19 +38,20 @@ class Vista(IntEnum):
             Vista.Salir: "Salir",
             Vista.Menu: "Menu",
 
-            Vista.HotelesListar: "Ver Hoteles",
-            Vista.RegistrarHotel: "Registrar hotel",
-            Vista.HotelModificar: "Hotel modificar",
+            Vista.HotelesListar: "Hoteles: Listar",
+            Vista.RegistrarHotel: "Hoteles: Registrar",
+            Vista.HotelModificar: "Hoteles: Modificar",
 
-            Vista.GestionarHotel: "Gestionar hotel",
-            Vista.DejarDeGestionarHotel: "Dejar de gestionar este hotel",
+            Vista.GestionarHotel: "Hoteles: Seleccionar",
+            Vista.DejarDeGestionarHotel: "Hoteles: Deseleccionar",
 
-            Vista.HotelesHabitacionesListar: "Gestionar habitaciones",
-            Vista.HabitacionModificar: "Modificar habitación",
+            Vista.HotelesHabitacionesListar: "Hoteles: Gestionar habitaciones",
+            Vista.HabitacionModificar: "Hoteles: Modificar habitación",
 
-            Vista.Reservar: "Reservar",
-            Vista.ReservacionCancelar: "Cancelar una reservación",
-            Vista.ReservacionesListar: "Ver Reservaciones",
+            Vista.Reservar: "Reservaciones: Reservar",
+            Vista.ReservacionModificar: "Reservaciones: Actualizar una reservación",
+            Vista.ReservacionEliminar: "Reservaciones: Eliminar una reservación",
+            Vista.ReservacionesListar: "Reservaciones: Listar",
 
             Vista.ReservacionesReporteDelPeriodo: "Reporte: reservaciones en período",
             Vista.ReservacionesReporteMejoresClientes: "Reporte: mejores clientes",
@@ -70,7 +72,8 @@ class Vista(IntEnum):
             Vista.HabitacionModificar: vista_habitacion_modificar,
 
             Vista.Reservar: vista_reservar,
-            Vista.ReservacionCancelar: vista_reservacion_cancelar,
+            Vista.ReservacionModificar: vista_reservacion_modificar,
+            Vista.ReservacionEliminar: vista_reservacion_eliminar,
             Vista.ReservacionesListar: vista_reservaciones_listar,
             Vista.OrdenarReservaciones: vista_cambiar_orden_reservaciones,
 
@@ -88,10 +91,11 @@ class Vista(IntEnum):
             Vista.GestionarHotel,
             Vista.Reservar,
             Vista.ReservacionesListar,
-            Vista.ReservacionCancelar,
-            Vista.ReservacionesReporteDelPeriodo,
-            Vista.ReservacionesReporteMejoresClientes,
-            Vista.ReservacionesReporteDuracion,
+            Vista.ReservacionModificar,
+            Vista.ReservacionEliminar,
+            # Vista.ReservacionesReporteDelPeriodo,
+            # Vista.ReservacionesReporteMejoresClientes,
+            # Vista.ReservacionesReporteDuracion,
             Vista.Salir,
         ]
 
@@ -104,10 +108,11 @@ class Vista(IntEnum):
             Vista.DejarDeGestionarHotel,
             Vista.Reservar,
             Vista.ReservacionesListar,
-            Vista.ReservacionCancelar,
-            Vista.ReservacionesReporteDelPeriodo,
-            Vista.ReservacionesReporteMejoresClientes,
-            Vista.ReservacionesReporteDuracion,
+            Vista.ReservacionModificar,
+            Vista.ReservacionEliminar,
+            # Vista.ReservacionesReporteDelPeriodo,
+            # Vista.ReservacionesReporteMejoresClientes,
+            # Vista.ReservacionesReporteDuracion,
             Vista.Salir,
         ]
 
@@ -361,20 +366,44 @@ def vista_reservar(app: App, vista=None):
     return Vista.Menu
 
 
-def vista_reservacion_cancelar(app: App, vista=None):
-    """Muestra la vista de cancelar una reservación"""
+def vista_reservacion_modificar(app: App, vista=None):
+    """Muestra la vista de modificar una reservación"""
 
     hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles)
 
-    print_seccion(app.cadenaHotelera + " - Cancelar Reservación en " + hotel.nombre)
+    print_seccion(app.cadenaHotelera + " - Modificar Reservación en " + hotel.nombre)
 
     reservacion = seleccionar_reservacion(app.get_reservaciones_del_hotel(hotel.id))
     print_info("Reservación seleccionada:")
     print(reservacion)
 
-    if leer_si_no("¿Desea cancelar esta reservación?"):
-        app.cancelar_reservacion(reservacion)
-        print_info("Reservación cancelada")
+    estado = seleccionar_opcion(
+        "Seleccione un estado",
+        [e.value for e in ReservacionEstado if e != reservacion.estado],
+        [e for e in ReservacionEstado if e != reservacion.estado],
+    )
+
+    if leer_si_no(f"¿Desea cambiar la reservación a '{estado}'?"):
+        reservacion.estado = ReservacionEstado(estado)
+        print_info("Reservación modificada")
+
+    return Vista.Menu
+
+
+def vista_reservacion_eliminar(app: App, vista=None):
+    """Muestra la vista de eliminar una reservación"""
+
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles)
+
+    print_seccion(app.cadenaHotelera + " - Eliminar Reservación en " + hotel.nombre)
+
+    reservacion = seleccionar_reservacion(app.get_reservaciones_del_hotel(hotel.id))
+    print_info("Reservación seleccionada:")
+    print(reservacion)
+
+    if leer_si_no("¿Desea eliminar esta reservación?"):
+        app.eliminar_reservacion(reservacion)
+        print_info("Reservación eliminada")
 
     return Vista.Menu
 
@@ -423,6 +452,8 @@ def vista_reservaciones_listar(app: App, vista=None):
 
     opciones = [
         ["Ordenar", Vista.OrdenarReservaciones],
+        ["Modificar una", Vista.ReservacionModificar],
+        ["Eliminar una", Vista.ReservacionEliminar],
         ["Volver al menú", Vista.Menu],
     ]
 
