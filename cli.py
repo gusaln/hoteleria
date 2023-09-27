@@ -18,6 +18,7 @@ class Vista(IntEnum):
 
     # Gestionar un hotel
     HotelesHabitacionesListar = auto()
+    HotelesHabitacionesDisponibles = auto()
     HabitacionModificar = auto()
 
     # Reservaciones
@@ -46,6 +47,7 @@ class Vista(IntEnum):
             Vista.DejarDeGestionarHotel: "Hoteles: Deseleccionar",
 
             Vista.HotelesHabitacionesListar: "Hoteles: Gestionar habitaciones",
+            Vista.HotelesHabitacionesDisponibles: "Hoteles: Habitaciones disponibles",
             Vista.HabitacionModificar: "Hoteles: Modificar habitación",
 
             Vista.Reservar: "Reservaciones: Reservar",
@@ -69,6 +71,7 @@ class Vista(IntEnum):
             Vista.DejarDeGestionarHotel: vista_dejar_de_gestionar_hotel,
 
             Vista.HotelesHabitacionesListar: vista_hotel_habitaciones_listar,
+            Vista.HotelesHabitacionesDisponibles: vista_hotel_habitaciones_disponibles,
             Vista.HabitacionModificar: vista_habitacion_modificar,
 
             Vista.Reservar: vista_reservar,
@@ -89,6 +92,8 @@ class Vista(IntEnum):
             Vista.HotelesListar,
             # Vista.RegistrarHotel,
             Vista.GestionarHotel,
+            Vista.HotelesHabitacionesListar,
+            Vista.HotelesHabitacionesDisponibles,
             Vista.Reservar,
             Vista.ReservacionesListar,
             Vista.ReservacionModificar,
@@ -103,9 +108,10 @@ class Vista(IntEnum):
     def menu_para_hotel():
         """Retorna las vistas en el menú para el hotel"""
         return [
-            Vista.HotelesHabitacionesListar,
-            Vista.HabitacionModificar,
             Vista.DejarDeGestionarHotel,
+            Vista.HotelesHabitacionesListar,
+            Vista.HotelesHabitacionesDisponibles,
+            Vista.HabitacionModificar,
             Vista.Reservar,
             Vista.ReservacionesListar,
             Vista.ReservacionModificar,
@@ -224,6 +230,43 @@ def vista_hotel_habitaciones_listar(app: App, vista=None):
     opciones = [
         ["Modificar hotel", Vista.HotelModificar],
         ["Modificar habitación", Vista.HabitacionModificar],
+        ["Volver al menú", Vista.Menu],
+        ["Salir del sistema", Vista.Salir],
+    ]
+    vista = seleccionar_opcion(
+        "Seleccione una operación",
+        [o[0] for o in opciones],
+        [o[1] for o in opciones],
+    )
+
+    return vista or Vista.HotelesListar
+
+
+def vista_hotel_habitaciones_disponibles(app: App, vista=None):
+    """Muestra las habitaciones de un hotel y su disponiblidad"""
+
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles, "Seleccione un hotel")
+
+    print_seccion(app.cadenaHotelera + " - Habitaciones disponibles de " + hotel.nombre)
+
+    fecha_inicial = leer_date("Indique la fecha inicial")
+    fecha_final = leer_date("Indique la fecha final")
+
+    habitaciones_bytipo = hotel.get_habitaciones_por_tipo()
+    disponibles_bytipo = app.get_habitaciones_disponibles_en_periodo(fecha_inicial, fecha_final, hotel)
+
+    for tipo, habitaciones in habitaciones_bytipo.items():
+        print(":::", tipo)
+        for habitacion in habitaciones:
+            if habitacion in disponibles_bytipo[tipo]:
+                print("  - [ ]", habitacion)
+            else:
+                print("  - [X]", habitacion)
+
+    opciones = [
+        ["Modificar hotel", Vista.HotelModificar],
+        ["Modificar habitación", Vista.HabitacionModificar],
+        ["Ver reservaciones", Vista.ReservacionesListar],
         ["Volver al menú", Vista.Menu],
         ["Salir del sistema", Vista.Salir],
     ]

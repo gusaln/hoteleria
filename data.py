@@ -28,6 +28,23 @@ class Hotel():
         self.habitaciones = habitaciones
         self.habitacionesTipos = habitacionesTipos
 
+    def get_habitaciones_por_tipo(self) -> Dict[str, List[str]]:
+        """
+        Devuelve las habitaciones agrupadas por tipo.
+        
+        
+        :return: Un `dict` con las habitaciones agrupadas por tipo.
+        """
+
+        habitaciones_por_tipo = {}
+        for habitacion, tipo in self.habitaciones.items():
+            if tipo not in habitaciones_por_tipo:
+                habitaciones_por_tipo[tipo] = [habitacion]
+            else:
+                habitaciones_por_tipo[tipo].append(habitacion)
+        
+        return habitaciones_por_tipo
+
     def capacidad(self) -> int:
         """Devuelve la capacidad del hotel."""
         capacidad = 0
