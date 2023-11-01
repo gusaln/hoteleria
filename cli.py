@@ -1,7 +1,9 @@
 
 from enum import IntEnum, auto
 from app import PARAMETROS_ORDEN, App
+from arboles import ArbolBinario, ArbolBinarioBalanceado, get_height_of
 from data import HabitacionTipo, ReservacionEstado
+from ordenamiento import Ordenable
 from term import *
 
 class Vista(IntEnum):
@@ -34,9 +36,14 @@ class Vista(IntEnum):
     EmpleadoEliminar = auto()
     EmpleadosListar = auto()
 
+    # Reportes
     ReservacionesReporteDelPeriodo = auto()
     ReservacionesReporteMejoresClientes = auto()
     ReservacionesReporteDuracion = auto()
+
+    ReporteEmpleadosPorHotel = auto()
+    ReporteFacturasPorHotelPorMes = auto()
+    ReporteFacturasTotal = auto()
 
     Salir = auto()
 
@@ -69,6 +76,10 @@ class Vista(IntEnum):
             Vista.ReservacionesReporteDelPeriodo: "Reporte: reservaciones en período",
             Vista.ReservacionesReporteMejoresClientes: "Reporte: mejores clientes",
             Vista.ReservacionesReporteDuracion: "Reporte: duración de estadías",
+
+            Vista.ReporteEmpleadosPorHotel: "Reporte: empleados por hotel",
+            Vista.ReporteFacturasPorHotelPorMes: "Reporte: facturas por hotel por mes",
+            Vista.ReporteFacturasTotal: "Reporte: facturas total",
         }.get(self, self.name)
 
     def vista(self):
@@ -99,6 +110,10 @@ class Vista(IntEnum):
             Vista.ReservacionesReporteDelPeriodo: vista_reservaciones_reporte_del_periodo,
             Vista.ReservacionesReporteMejoresClientes: vista_reservaciones_reporte_mejores_clientes,
             Vista.ReservacionesReporteDuracion: vista_reservaciones_reporte_duracion_estadias,
+
+            Vista.ReporteEmpleadosPorHotel: vista_reporte_empleados_por_hotel,
+            Vista.ReporteFacturasPorHotelPorMes: vista_reporte_facturas_por_hotel_por_mes,
+            Vista.ReporteFacturasTotal: vista_reporte_facturas_total,
         }.get(self, None)
 
     @staticmethod
@@ -123,6 +138,9 @@ class Vista(IntEnum):
             # Vista.ReservacionesReporteDelPeriodo,
             # Vista.ReservacionesReporteMejoresClientes,
             # Vista.ReservacionesReporteDuracion,
+            Vista.ReporteEmpleadosPorHotel,
+            Vista.ReporteFacturasPorHotelPorMes,
+            Vista.ReporteFacturasTotal,
             Vista.Salir,
         ]
 
@@ -147,6 +165,9 @@ class Vista(IntEnum):
             # Vista.ReservacionesReporteDelPeriodo,
             # Vista.ReservacionesReporteMejoresClientes,
             # Vista.ReservacionesReporteDuracion,
+            Vista.ReporteEmpleadosPorHotel,
+            Vista.ReporteFacturasPorHotelPorMes,
+            # Vista.ReporteFacturasTotal,
             Vista.Salir,
         ]
 
@@ -440,6 +461,11 @@ def vista_reservar(app: App, vista=None):
     print_info("Reservación registrada")
     print(reservacion)
 
+    factura = app.facturas.buscar(reservacion)
+
+    print_info("Factura")
+    print(factura)
+
     return Vista.Menu
 
 
@@ -452,7 +478,7 @@ def vista_reservacion_modificar(app: App, vista=None):
 
     reservacion = seleccionar_reservacion(app.get_reservaciones_del_hotel(hotel.id))
     print_info("Reservación seleccionada:")
-    print(reservacion)
+    print_tabla_reservaciones([reservacion])
 
     estado = seleccionar_opcion(
         "Seleccione un estado",
@@ -462,6 +488,19 @@ def vista_reservacion_modificar(app: App, vista=None):
 
     if leer_si_no(f"¿Desea cambiar la reservación a '{estado}'?"):
         reservacion.estado = ReservacionEstado(estado)
+
+        if reservacion.estado == ReservacionEstado.Pagada:
+            factura = app.facturas.buscar(reservacion)
+            factura.balance_pagado = factura.total
+
+        elif reservacion.estado == ReservacionEstado.Pendiente:
+            factura = app.facturas.buscar(reservacion)
+            factura.balance_pagado = 0
+
+        elif reservacion.estado == ReservacionEstado.Cancelada:
+            factura = app.facturas.buscar(reservacion)
+            factura.balance_pagado = 0
+
         app.registrar_actividad("Reservación modificada", data={"id": reservacion.id, "estado": estado})
         print_info("Reservación modificada")
 
@@ -669,6 +708,79 @@ def vista_empleados_eliminar(app: App, vista=None):
 ##
 # Reportes
 ##
+
+def vista_reporte_facturas_por_hotel_por_mes(app: App, vista=None):
+    """Muestra el reporte de facturas por hotel por mes"""
+
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles)
+    print_seccion(app.cadenaHotelera + " - Reporte de facturas de \"{hotel.nombre}\" y por mes")
+
+    if app.facturas is None:
+        print_info("No hay facturas en el sistema")
+        input("Presione <enter> para volver al menú > ")
+        return Vista.Menu
+
+    facturas = []
+    reservaciones = set(map(lambda r: r.id, app.get_reservaciones_del_hotel(hotel.id)))
+    for f in app.facturas.inorden():
+        # print_debug("evaluando", e)
+        if f.reservacion_id in reservaciones:
+            facturas.append(f)
+
+    print_tabla_facturas(sorted(facturas, key=lambda f: f.fecha.strftime("%Y-%m")))
+
+    print_info("Altura del árbol:", get_height_of(app.facturas))
+    input("Presione <enter> para volver al menú > ")
+
+    return Vista.Menu
+
+
+def vista_reporte_empleados_por_hotel(app: App, vista=None):
+    """Muestra es reporte de empleados de un hotel"""
+
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles)
+
+    print_seccion(f"{app.cadenaHotelera } - Reporte de empleados de \"{hotel.nombre}\"")
+
+    if app.empleados is None:
+        print_info("Este hotel no tiene empleados")
+        input("Presione <enter> para volver al menú > ")
+        return Vista.Menu
+
+    empleados = list()
+    for e in app.empleados.preorden():
+        if e.hotel_id == hotel.id:
+            empleados.append(e)
+
+    if len(empleados) == 0:
+        print_info("Este hotel no tiene empleados")
+        input("Presione <enter> para volver al menú > ")
+        return Vista.Menu
+
+    print_tabla_empleados(sorted(empleados, key=lambda e: e.fecha_contratacion))
+    print_info("Altura del árbol total:", get_height_of(app.empleados))
+
+    input("Presione <enter> para volver al menú > ")
+
+    return Vista.Menu
+
+
+def vista_reporte_facturas_total(app: App, vista=None):
+    """Muestra el reporte de facturas"""
+
+    print_seccion(f"{app.cadenaHotelera } - Reporte de facturas")
+
+    if app.facturas is None:
+        print_info("La cadena no tiene facturas")
+        input("Presione <enter> para volver al menú > ")
+        return Vista.Menu
+
+    print_tabla_empleados(app.facturas.posorden())
+    print_info("Altura del árbol:", get_height_of(app.facturas))
+
+    input("Presione <enter> para volver al menú > ")
+
+    return Vista.Menu
 
 def vista_reservaciones_reporte_del_periodo(app: App, vista=None):
     """Muestra el reporte del período"""

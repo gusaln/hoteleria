@@ -3,12 +3,12 @@ import json
 import os
 from typing import Dict
 from config import CURRENT_DIR, Config
-from data import Actividad, Cliente, Empleado, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
+from data import Actividad, Cliente, Empleado, Factura, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
 import csv
 from listas import Queue, Stack
 
 from ordenamiento import Ordenable, heapsort, mergesort, quicksort, shellsort
-from arboles import ArbolBinario
+from arboles import ArbolBinario, ArbolBinarioBalanceado
 from term import *
 
 
@@ -45,9 +45,13 @@ class App:
         self.reservaciones = Queue()
         self.actividades = Stack()
 
-        # Esta línea es para ayudar al IDE a entender que aquí va a un Arbol
+        # Esta línea es para ayudar al IDE a entender que aquí va a un ArbolBinario
         self.empleados = ArbolBinario(None)
         self.empleados = None
+
+        # Esta línea es para ayudar al IDE a entender que aquí va a un ArbolBinarioBalanceado
+        self.facturas = ArbolBinarioBalanceado(None)
+        self.facturas = None
 
         # Esta línea es para ayudar al IDE a entender que aquí va a un Hotel
         self.hotelSeleccionado = Hotel(0, "", "", {}, {})
@@ -55,7 +59,7 @@ class App:
 
         self.ordenamiento = [1]
 
-    ## Métodos de I.O.
+    # Métodos de I.O.
     def cargar(self):
         """Carga los datos del sistema.
 
@@ -66,7 +70,8 @@ class App:
 
         clientes_file_path = os.path.abspath(self.config.archivo_clientes)
         if not os.path.exists(clientes_file_path):
-            clientes_file_path = os.path.join(CURRENT_DIR, "seeds", "clientes.csv")
+            clientes_file_path = os.path.join(
+                CURRENT_DIR, "seeds", "clientes.csv")
 
         with open(clientes_file_path) as fp:
             for row in csv.reader(
@@ -80,7 +85,8 @@ class App:
 
         hoteles_file_path = os.path.abspath(self.config.archivo_hoteles)
         if not os.path.exists(hoteles_file_path):
-            hoteles_file_path = os.path.join(CURRENT_DIR, "seeds", "hoteles.json")
+            hoteles_file_path = os.path.join(
+                CURRENT_DIR, "seeds", "hoteles.json")
 
         with open(hoteles_file_path) as fp:
             hoteles = json.load(fp)
@@ -88,7 +94,8 @@ class App:
                 tipos = {}
                 tiposRaw = hotelRaw["tipos"]
                 for tipo in tiposRaw:
-                    tipos[tipo["codigo"]] = HabitacionTipo(tipo["codigo"], tipo["nombre"], tipo["capacidad"], tipo["precio"])
+                    tipos[tipo["codigo"]] = HabitacionTipo(
+                        tipo["codigo"], tipo["nombre"], tipo["capacidad"], tipo["precio"])
 
                 self.hoteles.push(Hotel(
                     hotelRaw["nombre"],
@@ -102,7 +109,8 @@ class App:
         empleados_file_path = os.path.abspath(self.config.archivo_empleados)
         empleados_seed = False
         if not os.path.exists(empleados_file_path):
-            empleados_file_path = os.path.join(CURRENT_DIR, "seeds", "empleados.csv")
+            empleados_file_path = os.path.join(
+                CURRENT_DIR, "seeds", "empleados.csv")
             empleados_seed = True
 
         empleados = list()
@@ -117,9 +125,11 @@ class App:
                 id = int(id)
                 hotel_id = int(hotel_id)
                 salario = float(salario)
-                fecha_contratacion = datetime.datetime.strptime(fecha_contratacion, "%Y-%m-%d")
+                fecha_contratacion = datetime.datetime.strptime(
+                    fecha_contratacion, "%Y-%m-%d")
 
-                empleados.append(Empleado(hotel_id, ci, nombre, puesto, salario, fecha_contratacion, id=id))
+                empleados.append(Empleado(hotel_id, ci, nombre,
+                                 puesto, salario, fecha_contratacion, id=id))
 
         if len(empleados) > 0:
             # if empleados_seed:
@@ -128,9 +138,9 @@ class App:
                 self.empleados.agregar(e)
             # else:
                 # self.empleados = ArbolBinario.deserialize(empleados)
-        
 
-        reservaciones_file_path = os.path.abspath(self.config.archivo_reservaciones)
+        reservaciones_file_path = os.path.abspath(
+            self.config.archivo_reservaciones)
         if not os.path.exists(reservaciones_file_path):
             reservaciones_file_path = os.path.join(
                 CURRENT_DIR, "seeds", "reservaciones.csv"
@@ -159,10 +169,14 @@ class App:
                 ) = row
                 id = int(id)
                 hotel_id = int(hotel_id)
-                fecha_entrada = datetime.datetime.strptime(fecha_entrada, "%Y-%m-%d")
-                fecha_salida = datetime.datetime.strptime(fecha_salida, "%Y-%m-%d")
-                hora_entrada = datetime.datetime.strptime(hora_entrada, "%H:%M").time()
-                hora_salida = datetime.datetime.strptime(hora_salida, "%H:%M").time()
+                fecha_entrada = datetime.datetime.strptime(
+                    fecha_entrada, "%Y-%m-%d")
+                fecha_salida = datetime.datetime.strptime(
+                    fecha_salida, "%Y-%m-%d")
+                hora_entrada = datetime.datetime.strptime(
+                    hora_entrada, "%H:%M").time()
+                hora_salida = datetime.datetime.strptime(
+                    hora_salida, "%H:%M").time()
                 precio = float(precio)
 
                 self.reservaciones.push(
@@ -182,7 +196,42 @@ class App:
                     )
                 )
 
-        actividades_file_path = os.path.abspath(self.config.archivo_actividades)
+        facturas_file_path = os.path.abspath(self.config.archivo_facturas)
+        if not os.path.exists(facturas_file_path):
+            facturas_file_path = os.path.join(
+                CURRENT_DIR, "seeds", "facturas.csv"
+            )
+
+        facturas = list()
+        with open(facturas_file_path) as fp:
+            for row in csv.reader(
+                fp.readlines(),
+                delimiter=";",
+                lineterminator="\n",
+                quoting=csv.QUOTE_MINIMAL,
+            ):
+                id, reservacion_id, total, balance_pagado, fecha = row
+
+                # print_debug(id, reservacion_id, total, balance_pagado, fecha)
+                id = int(id)
+                reservacion_id = int(reservacion_id)
+                total = float(total)
+                balance_pagado = float(balance_pagado)
+                fecha = datetime.datetime.strptime(fecha.strip(), "%Y-%m-%d")
+
+                facturas.append(Factura(reservacion_id, total,
+                                balance_pagado, fecha, id=id))
+
+        if len(facturas) > 0:
+            # if facturas_seed:
+            self.facturas = ArbolBinarioBalanceado(facturas[0])
+            for e in facturas[1:]:
+                self.facturas.agregar(e)
+            # else:
+                # self.facturas = ArbolBinario.deserialize(facturas)
+
+        actividades_file_path = os.path.abspath(
+            self.config.archivo_actividades)
         if not os.path.exists(actividades_file_path):
             return
 
@@ -204,7 +253,8 @@ class App:
                 esError = bool(esError)
                 data = json.loads(data)
 
-                actividades.append(Actividad(evento, data, esError, fecha=fecha))
+                actividades.append(
+                    Actividad(evento, data, esError, fecha=fecha))
             for a in reversed(actividades):
                 self.actividades.stack(a)
 
@@ -218,8 +268,10 @@ class App:
         clientes_file_path = os.path.abspath(self.config.archivo_clientes)
         empleados_file_path = os.path.abspath(self.config.archivo_empleados)
         hoteles_file_path = os.path.abspath(self.config.archivo_hoteles)
-        reservaciones_file_path = os.path.abspath(self.config.archivo_reservaciones)
-        actividades_file_path = os.path.abspath(self.config.archivo_actividades)
+        reservaciones_file_path = os.path.abspath(
+            self.config.archivo_reservaciones)
+        actividades_file_path = os.path.abspath(
+            self.config.archivo_actividades)
 
         with open(clientes_file_path, "w") as fp:
             csvwriter = csv.writer(
@@ -234,13 +286,15 @@ class App:
                     fp, delimiter=";", lineterminator="\n", quoting=csv.QUOTE_MINIMAL
                 )
                 for e in self.empleados.serialize():
-                    csvwriter.writerow((e.id, e.hotel_id, e.ci, e.nombre, e.puesto, e.salario, e.fecha_contratacion.strftime("%Y-%m-%d")))
+                    csvwriter.writerow((e.id, e.hotel_id, e.ci, e.nombre, e.puesto,
+                                       e.salario, e.fecha_contratacion.strftime("%Y-%m-%d")))
 
         with open(hoteles_file_path, "w") as fp:
             hoteles = [
-                {"id": h.id, "nombre": h.nombre, "direccion": h.direccion, "telefono": h.telefono, "habitaciones": h.habitaciones, "tipos": [h.habitacionesTipos[t].__dict__ for t in h.habitacionesTipos]} 
+                {"id": h.id, "nombre": h.nombre, "direccion": h.direccion, "telefono": h.telefono,
+                    "habitaciones": h.habitaciones, "tipos": [h.habitacionesTipos[t].__dict__ for t in h.habitacionesTipos]}
                 for h in self.hoteles
-                ]
+            ]
             json.dump(hoteles, fp)
 
         with open(reservaciones_file_path, "w") as fp:
@@ -299,7 +353,7 @@ class App:
 
         print_info("Datos guardados")
 
-    ## Operaciones de la App
+    # Operaciones de la App
 
     def esta_ocupada(
         self,
@@ -308,7 +362,8 @@ class App:
         fecha_final: datetime.datetime,
     ):
         """Devuelve si la habitación está ocupada en el rango de fechas."""
-        reservaciones = filter(lambda r: r.habitacion == habitacion, self.reservaciones)
+        reservaciones = filter(lambda r: r.habitacion ==
+                               habitacion, self.reservaciones)
         reservaciones = filter(
             lambda r: r.fecha_entrada >= fecha_inicial
             and r.fecha_salida <= fecha_final,
@@ -338,15 +393,41 @@ class App:
             return hotel.tipo_habitacion(habitacion)
         return None
 
+    def registrar_actividad(
+        self,
+        evento: str,
+        data: dict = {},
+    ) -> Actividad:
+        """Registra una actividad."""
+
+        a = Actividad(evento, data)
+        self.actividades.stack(a)
+        self.persistir()
+
+        return a
+
+    def registrar_error(
+        self,
+        evento: str,
+        data: dict = {},
+    ) -> Actividad:
+        """Registra un error."""
+
+        a = Actividad(evento, data, esError=True)
+        self.actividades.stack(a)
+        self.persistir()
+
+        return a
+
     def get_habitaciones_disponibles_en_periodo(
-        self, 
-        fecha_inicial: datetime.datetime, 
-        fecha_final: datetime.datetime, 
+        self,
+        fecha_inicial: datetime.datetime,
+        fecha_final: datetime.datetime,
         hotel: Hotel = None
     ) -> Dict[str, List[str]]:
         """
         Devuelve las habitaciones disponibles en el rango de fechas.
-        
+
         :return: Un `dict` con las habitaciones disponibles agrupadas por el código del tipo.
         """
         hotel = hotel or self.hotelSeleccionado
@@ -357,7 +438,7 @@ class App:
             r.habitacion
             for r in self.get_reservaciones_por_periodo(fecha_inicial, fecha_final, hotel)
         )
-        
+
         disponibles = {}
 
         for habitacion in hotel.habitaciones:
@@ -373,9 +454,9 @@ class App:
         return disponibles
 
     def get_reservaciones_por_periodo(
-        self, 
-        fecha_inicial: datetime.datetime, 
-        fecha_final: datetime.datetime, 
+        self,
+        fecha_inicial: datetime.datetime,
+        fecha_final: datetime.datetime,
         hotel: Hotel = None
     ):
         """Devuelve las reservaciones que se encuentran en el rango de fechas."""
@@ -394,12 +475,15 @@ class App:
     ):
         """Devuelve un reporte de las reservaciones que se encuentran en el rango de fechas ordenadas por precio."""
 
-        reservaciones = self.get_reservaciones_por_periodo(fecha_inicial, fecha_final)
+        reservaciones = self.get_reservaciones_por_periodo(
+            fecha_inicial, fecha_final)
 
         if asc:
-            reservaciones = map(lambda r: Ordenable(r, r.precio), reservaciones)
+            reservaciones = map(lambda r: Ordenable(
+                r, r.precio), reservaciones)
         else:
-            reservaciones = map(lambda r: Ordenable(r, -r.precio), reservaciones)
+            reservaciones = map(lambda r: Ordenable(
+                r, -r.precio), reservaciones)
 
         reservaciones = list(reservaciones)
         mergesort(reservaciones)
@@ -436,7 +520,8 @@ class App:
         shellsort(resultados)
 
         return [
-            MejorCliente(self.clientes[ordenable.data], clientes_count[ordenable.data])
+            MejorCliente(self.clientes[ordenable.data],
+                         clientes_count[ordenable.data])
             for ordenable in resultados
         ]
 
@@ -504,33 +589,16 @@ class App:
             "personas_count": r.personas_count,
             "observaciones": r.observaciones
         })
+
+        self.__registrar_factura(Factura(
+            reservacion_id=r.id,
+            total=r.precio,
+            balance_pagado=0,
+            fecha=datetime.datetime.now()
+        ))
         self.persistir()
 
         return r
-
-    def registrar_actividad(
-        self,
-        evento: str,
-        data: dict = {},
-    ) -> Actividad:
-        
-        a = Actividad(evento, data)
-        self.actividades.stack(a)
-        self.persistir()
-
-        return a
-
-    def registrar_error(
-        self,
-        evento: str,
-        data: dict = {},
-    ) -> Actividad:
-        
-        a = Actividad(evento, data, esError=True)
-        self.actividades.stack(a)
-        self.persistir()
-
-        return a
 
     def get_reservaciones_del_hotel(self, hotel_id: int) -> List[Reservacion]:
         """Devuelve las reservaciones de un hotel."""
@@ -553,6 +621,7 @@ class App:
             "personas_count": reservacion.personas_count,
             "observaciones": reservacion.observaciones
         })
+        self.eliminar_factura(reservacion)
         self.persistir()
 
     def format_ordenamiento(self):
@@ -567,7 +636,8 @@ class App:
 
         ordenados = None
         if self.hotelSeleccionado is not None:
-            ordenados = filter(lambda r: r.hotel_id == self.hotelSeleccionado.id, self.reservaciones)
+            ordenados = filter(lambda r: r.hotel_id ==
+                               self.hotelSeleccionado.id, self.reservaciones)
         else:
             ordenados = self.reservaciones
         ordenados = list(ordenados)
@@ -584,7 +654,6 @@ class App:
                     ordenados = [r.data for r in ordenables]
 
         return ordenados
-
 
     def registrar_empleado(self, empleado: Empleado):
         """Registra un nuevo empleado"""
@@ -604,7 +673,7 @@ class App:
             "fecha_contratacion": empleado.fecha_contratacion.strftime("%d/%m/%Y"),
         })
         self.persistir()
-        
+
         return empleado
 
     def get_empleados(self) -> Iterable[Empleado]:
@@ -613,7 +682,6 @@ class App:
             return tuple()
 
         return tuple(self.empleados.inorden())
-
 
     def get_empleados_por_ci(self) -> Dict[str, Empleado]:
         if self.empleados is None:
@@ -636,8 +704,8 @@ class App:
         """Elimina un empleado"""
 
         if self.empleados is None:
-            return 
-        
+            return
+
         self.empleados = self.empleados.borrar(empleado)
         self.registrar_actividad("Empleado eliminado eliminada", {
             "id": empleado.id,
@@ -649,3 +717,81 @@ class App:
             "fecha_contratacion": empleado.fecha_contratacion.strftime("%d/%m/%Y"),
         })
         self.persistir()
+
+    def registrar_factura(self, factura: Factura):
+        """Registra un nuevo factura"""
+
+        factura = self.__registrar_factura(factura)
+        self.persistir()
+
+        return factura
+
+    def __registrar_factura(self, factura: Factura):
+        """Realiza las operaciones necesarias para registrar una factura un nueva factura"""
+
+        if self.facturas is None:
+            self.facturas = ArbolBinarioBalanceado(factura)
+        else:
+            self.facturas.agregar(factura)
+
+        self.registrar_actividad("Factura registrada", {
+            "id": factura.id,
+            "reservacion_id": factura.reservacion_id,
+            "total": factura.total,
+            "balance_pagado": factura.balance_pagado,
+            "fecha_contratacion": factura.fecha.strftime("%d/%m/%Y"),
+        })
+
+        return factura
+
+    def get_facturas(self) -> Iterable[Factura]:
+        """Devuelve la lista de facturas"""
+        if self.facturas is None:
+            return tuple()
+
+        return tuple(self.facturas.inorden())
+
+    def get_facturas_de_hotel(self, hotel_id: int):
+        """Devuelve la lista de facturas de un hotel"""
+        if self.facturas is None:
+            return tuple()
+
+        reservaciones = set(
+            map(lambda r: r.id, self.get_reservaciones_del_hotel(hotel_id)))
+        for f in self.get_facturas():
+            # print_debug("evaluando", e)
+            if f.reservacion_id in reservaciones:
+                yield f
+
+    def eliminar_factura(self, factura: Factura):
+        """Elimina un factura"""
+
+        if self.facturas is None:
+            return
+
+        self.__eliminar_factura(factura)
+        self.persistir()
+
+    def __eliminar_factura(self, factura: Factura):
+        """Elimina un factura"""
+
+        if self.facturas is None:
+            return
+
+        self.facturas = self.facturas.borrar(factura)
+        self.registrar_actividad("Factura eliminado eliminada", {
+            "id": factura.id,
+            "reservacion_id": factura.reservacion_id,
+            "total": factura.total,
+            "balance_pagado": factura.balance_pagado,
+            "fecha_contratacion": factura.fecha.strftime("%d/%m/%Y"),
+        })
+
+    def eliminar_factura_por_reservacion(self, reservacion: Reservacion):
+        """Elimina un factura"""
+
+        if self.facturas is None:
+            return
+
+        factura = self.facturas.buscar(reservacion)
+        self.__eliminar_factura(factura)

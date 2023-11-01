@@ -130,8 +130,71 @@ class Empleado:
     def __eq__(self, other) -> bool:
         if other is None:
             return False
-            
+
         return self.id == other.id
+
+
+class Factura:
+    """Representa un factura."""
+
+    def __init__(
+            self,
+            reservacion_id: int,
+            total: float,
+            balance_pagado: float,
+            fecha: datetime.datetime,
+            id: int = None):
+        self.id = id or int(datetime.datetime.now().timestamp() * 1000)
+        self.reservacion_id = reservacion_id
+        self.total = total
+        self.balance_pagado = balance_pagado
+        self.fecha = fecha
+
+    def __str__(self):
+        return f"Factura id={self.id} reservacion_id={self.reservacion_id} fecha={self.fecha.strftime('%d/%m/%Y')} balance={self.balance_pagado} de {self.total}"
+
+    # def __cmp__(self, other) -> int:
+        # return self.id - other.id
+
+    def __le__(self, other) -> bool:
+        if other is None:
+            return False
+        if type(other) is Reservacion:
+            return self.reservacion_id <= other.id
+
+        return self.reservacion_id <= other.reservacion_id
+
+    def __ge__(self, other) -> bool:
+        if other is None:
+            return True
+        if type(other) is Reservacion:
+            return self.reservacion_id >= other.id
+
+        return self.reservacion_id >= other.reservacion_id
+
+    def __lt__(self, other) -> bool:
+        if other is None:
+            return False
+        if type(other) is Reservacion:
+            return self.reservacion_id < other.id
+
+        return self.reservacion_id < other.reservacion_id
+
+    def __gt__(self, other) -> bool:
+        if other is None:
+            return True
+        if type(other) is Reservacion:
+            return self.reservacion_id > other.id
+
+        return self.reservacion_id > other.reservacion_id
+
+    def __eq__(self, other) -> bool:
+        if other is None:
+            return False
+        if type(other) is Reservacion:
+            return self.reservacion_id == other.id
+
+        return self.reservacion_id == other.reservacion_id
 
 
 class ReservacionEstado(StrEnum):

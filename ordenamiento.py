@@ -2,7 +2,40 @@ from collections import namedtuple
 from typing import List
 
 # Representa un par ordenable, donde `data` es el `valor` y key es la clave de ordenamiento
-Ordenable = namedtuple("Ordenable", ["data", "key"])
+class Ordenable(object):
+    def __init__(self, data, key):
+        self.data = data
+        self.key = key
+
+    def __le__(self, other) -> bool:
+        if other is None:
+            return False
+
+        return self.key <= other.key
+
+    def __ge__(self, other) -> bool:
+        if other is None:
+            return True
+
+        return self.key >= other.key
+
+    def __lt__(self, other) -> bool:
+        if other is None:
+            return False
+
+        return self.key < other.key
+
+    def __gt__(self, other) -> bool:
+        if other is None:
+            return True
+
+        return self.key > other.key
+
+    def __eq__(self, other) -> bool:
+        if other is None:
+            return False
+
+        return self.key == other.key and self.data == other.data
 
 
 def quicksort(arr: List[Ordenable], lo=0, hi=None):

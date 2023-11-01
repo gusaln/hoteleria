@@ -1,7 +1,7 @@
 import datetime
 from typing import Iterable, List
 
-from data import Cliente, Empleado, Hotel, MejorCliente, Reservacion
+from data import Cliente, Empleado, Factura, Hotel, MejorCliente, Reservacion
 import re
 
 
@@ -121,7 +121,7 @@ def seleccionar_opcion(mensaje: str, opciones, valores=[]):
     while True:
         print(mensaje)
         for i, o in enumerate(opciones):
-            print(f"  [{i+1}] {o}")
+            print("  [{: >3}] {}".format(i+1, o))
 
         raw = leer_int()
         if raw > 0 and raw <= len(opciones):
@@ -159,7 +159,6 @@ def seleccionar_empleado(empleados: Iterable[Empleado], msg: str = "Seleccione u
     """Muestra un selector de empleados"""
 
     empleados = list(empleados)
-    print_debug(empleados)
     return seleccionar_opcion(
         msg or "Seleccione un empleado",
         ["%s - %s" % (e.ci, e.nombre) for e in empleados],
@@ -325,6 +324,42 @@ def print_tabla_empleados(empleados: List[Empleado]):
             puesto=e.puesto,
             salario=e.salario,
             fecha_contratacion=e.fecha_contratacion.strftime("%d/%m/%Y")
+            ))
+    print(end="\n\n")
+
+
+def print_tabla_facturas(facturas: List[Factura]):
+    """Imprime una tabla con los facturas"""
+
+    fmt = "| {id: <13} | {reservacion_id: <13} | {total: <8} | {balance_pagado: <8} | {estado: <8} | {fecha: <12}"
+    print(
+        fmt.format(
+            id="ID",
+            reservacion_id="Hotel ID",
+            total="Total",
+            balance_pagado="Pagado",
+            estado="Estado",
+            fecha="F. Contrat.",
+        ),
+    )
+    print(
+        fmt.format(
+            id=":--:",
+            reservacion_id=":--:",
+            total=":--:",
+            balance_pagado=":--:",
+            estado=":--:",
+            fecha=":--:",
+        ),
+    )
+    for f in facturas:
+        print(fmt.format(
+            id=f.id,
+            reservacion_id=f.reservacion_id,
+            total=f.total,
+            balance_pagado=f.balance_pagado,
+            estado="pendiente" if f.balance_pagado < f.total else "pagado",
+            fecha=f.fecha.strftime("%d/%m/%Y")
             ))
     print(end="\n\n")
 
