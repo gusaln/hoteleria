@@ -31,8 +31,8 @@ class Hotel():
     def get_habitaciones_por_tipo(self) -> Dict[str, List[str]]:
         """
         Devuelve las habitaciones agrupadas por tipo.
-        
-        
+
+
         :return: Un `dict` con las habitaciones agrupadas por tipo.
         """
 
@@ -42,7 +42,7 @@ class Hotel():
                 habitaciones_por_tipo[tipo] = [habitacion]
             else:
                 habitaciones_por_tipo[tipo].append(habitacion)
-        
+
         return habitaciones_por_tipo
 
     def capacidad(self) -> int:
@@ -75,6 +75,63 @@ class Hotel():
         if self.tiene_habitacion(habitacion):
             return self.habitacionesTipos[self.habitaciones[habitacion]]
         return None
+
+
+class Empleado:
+    """Representa un empleado."""
+
+    def __init__(
+            self,
+            hotel_id: int,
+            ci: str,
+            nombre: str,
+            puesto: str,
+            salario: float,
+            fecha_contratacion: datetime.datetime,
+            id: int = None):
+        self.id = id or int(datetime.datetime.now().timestamp() * 1000)
+        self.hotel_id = hotel_id
+        self.ci = ci
+        self.nombre = nombre
+        self.puesto = puesto
+        self.salario = salario
+        self.fecha_contratacion = fecha_contratacion
+
+    def __str__(self):
+        return f"Empleado id={self.id} hotel_id={self.hotel_id} ci={self.ci} nombre={self.nombre}"
+
+    # def __cmp__(self, other) -> int:
+        # return self.id - other.id
+
+    def __le__(self, other) -> bool:
+        if other is None:
+            return False
+
+        return self.id <= other.id
+
+    def __ge__(self, other) -> bool:
+        if other is None:
+            return True
+
+        return self.id >= other.id
+
+    def __lt__(self, other) -> bool:
+        if other is None:
+            return False
+
+        return self.id < other.id
+
+    def __gt__(self, other) -> bool:
+        if other is None:
+            return True
+
+        return self.id > other.id
+
+    def __eq__(self, other) -> bool:
+        if other is None:
+            return False
+            
+        return self.id == other.id
 
 
 class ReservacionEstado(StrEnum):

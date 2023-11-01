@@ -3,11 +3,12 @@ import json
 import os
 from typing import Dict
 from config import CURRENT_DIR, Config
-from data import Actividad, Cliente, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
+from data import Actividad, Cliente, Empleado, HabitacionTipo, Hotel, MejorCliente, Reservacion, ReservacionEstado
 import csv
 from listas import Queue, Stack
 
 from ordenamiento import Ordenable, heapsort, mergesort, quicksort, shellsort
+from arboles import ArbolBinario
 from term import *
 
 
@@ -44,6 +45,10 @@ class App:
         self.reservaciones = Queue()
         self.actividades = Stack()
 
+        # Esta línea es para ayudar al IDE a entender que aquí va a un Arbol
+        self.empleados = ArbolBinario(None)
+        self.empleados = None
+
         # Esta línea es para ayudar al IDE a entender que aquí va a un Hotel
         self.hotelSeleccionado = Hotel(0, "", "", {}, {})
         self.hotelSeleccionado = None
@@ -70,8 +75,8 @@ class App:
                 lineterminator="\n",
                 quoting=csv.QUOTE_MINIMAL,
             ):
-                id, nombre, email = row
-                self.clientes[id] = Cliente(id, nombre, email)
+                ci, nombre, email = row
+                self.clientes[ci] = Cliente(ci, nombre, email)
 
         hoteles_file_path = os.path.abspath(self.config.archivo_hoteles)
         if not os.path.exists(hoteles_file_path):
@@ -93,6 +98,37 @@ class App:
                     tipos,
                     hotelRaw["id"],
                 ))
+
+        empleados_file_path = os.path.abspath(self.config.archivo_empleados)
+        empleados_seed = False
+        if not os.path.exists(empleados_file_path):
+            empleados_file_path = os.path.join(CURRENT_DIR, "seeds", "empleados.csv")
+            empleados_seed = True
+
+        empleados = list()
+        with open(empleados_file_path) as fp:
+            for row in csv.reader(
+                fp.readlines(),
+                delimiter=";",
+                lineterminator="\n",
+                quoting=csv.QUOTE_MINIMAL,
+            ):
+                id, hotel_id, ci, nombre, puesto, salario, fecha_contratacion = row
+                id = int(id)
+                hotel_id = int(hotel_id)
+                salario = float(salario)
+                fecha_contratacion = datetime.datetime.strptime(fecha_contratacion, "%Y-%m-%d")
+
+                empleados.append(Empleado(hotel_id, ci, nombre, puesto, salario, fecha_contratacion, id=id))
+
+        if len(empleados) > 0:
+            # if empleados_seed:
+            self.empleados = ArbolBinario(empleados[0])
+            for e in empleados[1:]:
+                self.empleados.agregar(e)
+            # else:
+                # self.empleados = ArbolBinario.deserialize(empleados)
+        
 
         reservaciones_file_path = os.path.abspath(self.config.archivo_reservaciones)
         if not os.path.exists(reservaciones_file_path):
@@ -180,6 +216,7 @@ class App:
         print_info("Guardando datos")
 
         clientes_file_path = os.path.abspath(self.config.archivo_clientes)
+        empleados_file_path = os.path.abspath(self.config.archivo_empleados)
         hoteles_file_path = os.path.abspath(self.config.archivo_hoteles)
         reservaciones_file_path = os.path.abspath(self.config.archivo_reservaciones)
         actividades_file_path = os.path.abspath(self.config.archivo_actividades)
@@ -190,6 +227,14 @@ class App:
             )
             for id, cliente in self.clientes.items():
                 csvwriter.writerow((id, cliente.nombre, cliente.email))
+
+        with open(empleados_file_path, "w") as fp:
+            if self.empleados is not None:
+                csvwriter = csv.writer(
+                    fp, delimiter=";", lineterminator="\n", quoting=csv.QUOTE_MINIMAL
+                )
+                for e in self.empleados.serialize():
+                    csvwriter.writerow((e.id, e.hotel_id, e.ci, e.nombre, e.puesto, e.salario, e.fecha_contratacion.strftime("%Y-%m-%d")))
 
         with open(hoteles_file_path, "w") as fp:
             hoteles = [
@@ -539,3 +584,68 @@ class App:
                     ordenados = [r.data for r in ordenables]
 
         return ordenados
+
+
+    def registrar_empleado(self, empleado: Empleado):
+        """Registra un nuevo empleado"""
+
+        if self.empleados is None:
+            self.empleados = ArbolBinario(empleado)
+        else:
+            self.empleados.agregar(empleado)
+
+        self.registrar_actividad("Empleado registrado", {
+            "id": empleado.id,
+            "hotel_id": empleado.hotel_id,
+            "ci": empleado.ci,
+            "nombre": empleado.nombre,
+            "puesto": empleado.puesto,
+            "salario": empleado.salario,
+            "fecha_contratacion": empleado.fecha_contratacion.strftime("%d/%m/%Y"),
+        })
+        self.persistir()
+        
+        return empleado
+
+    def get_empleados(self) -> Iterable[Empleado]:
+        """Devuelve la lista de empleados"""
+        if self.empleados is None:
+            return tuple()
+
+        return tuple(self.empleados.inorden())
+
+
+    def get_empleados_por_ci(self) -> Dict[str, Empleado]:
+        if self.empleados is None:
+            return dict()
+
+        return {e.ci: e for e in self.empleados}
+
+    def get_empleados_de_hotel(self, hotel_id: int):
+        """Devuelve la lista de empleados de un hotel"""
+        if self.empleados is None:
+            return tuple()
+
+        # print_debug("hotel_id", hotel_id)
+        for e in self.get_empleados():
+            # print_debug("evaluando", e)
+            if e.hotel_id == hotel_id:
+                yield e
+
+    def eliminar_empleado(self, empleado: Empleado):
+        """Elimina un empleado"""
+
+        if self.empleados is None:
+            return 
+        
+        self.empleados = self.empleados.borrar(empleado)
+        self.registrar_actividad("Empleado eliminado eliminada", {
+            "id": empleado.id,
+            "hotel_id": empleado.hotel_id,
+            "ci": empleado.ci,
+            "nombre": empleado.nombre,
+            "puesto": empleado.puesto,
+            "salario": empleado.salario,
+            "fecha_contratacion": empleado.fecha_contratacion.strftime("%d/%m/%Y"),
+        })
+        self.persistir()

@@ -1,7 +1,7 @@
 import datetime
 from typing import Iterable, List
 
-from data import Cliente, Hotel, MejorCliente, Reservacion
+from data import Cliente, Empleado, Hotel, MejorCliente, Reservacion
 import re
 
 
@@ -13,6 +13,7 @@ def print_error(*mensajes):
 def print_debug(*mensajes):
     """Imprime un mensaje de DEBUG"""
     print("[DEBUG]", *mensajes)
+
 
 def print_titulo(titulo):
     """Imprime un título"""
@@ -26,7 +27,7 @@ def print_titulo(titulo):
 
 def print_seccion(*seccion):
     """Imprime el encabezado de una sección"""
-    
+
     print()
     print(":::", *seccion)
 
@@ -37,7 +38,7 @@ def print_info(*info):
     print("-->", *info)
 
 
-def leer_str(mensaje=None, prompt="> ", predeterminado = None):
+def leer_str(mensaje=None, prompt="> ", predeterminado=None):
     """Lee un string
 
     Esta función imprime un mensaje de haber uno, salta una línea y espera la entrada del usuario
@@ -83,6 +84,7 @@ def leer_int(mensaje=None, predeterminado=None):
         except ValueError:
             print_error("Debe indicar un número")
 
+
 def leer_float(mensaje=None, predeterminado=None):
     """Lee un valor entero"""
     while True:
@@ -95,6 +97,7 @@ def leer_float(mensaje=None, predeterminado=None):
             return float(s)
         except ValueError:
             print_error("Debe indicar un número")
+
 
 def leer_si_no(mensaje):
     """Lee un boolean"""
@@ -147,12 +150,24 @@ def seleccionar_reservacion(reservaciones: Iterable[Reservacion], msg: str = "Se
     fmt = "cliente={0.cliente.ci}; habitación={0.habitacion}; fechas={fecha_entrada} - {fecha_salida}; estado={0.estado}"
     return seleccionar_opcion(
         msg or "Seleccione una reservación",
-        [fmt.format(r, fecha_entrada = r.format_fecha_entrada(), fecha_salida = r.format_fecha_salida()) for r in reservaciones],
+        [fmt.format(r, fecha_entrada=r.format_fecha_entrada(),
+                    fecha_salida=r.format_fecha_salida()) for r in reservaciones],
         reservaciones,
     )
 
+def seleccionar_empleado(empleados: Iterable[Empleado], msg: str = "Seleccione un empleado"):
+    """Muestra un selector de empleados"""
 
-def print_tabla_hoteles(hoteles: List[Hotel], habitaciones_ocupadas: List[str]=[]):
+    empleados = list(empleados)
+    print_debug(empleados)
+    return seleccionar_opcion(
+        msg or "Seleccione un empleado",
+        ["%s - %s" % (e.ci, e.nombre) for e in empleados],
+        empleados,
+    )
+
+
+def print_tabla_hoteles(hoteles: List[Hotel], habitaciones_ocupadas: List[str] = []):
     """Imprime una tabla con las reservaciones"""
 
     fmt = "| {id: <13} | {nombre: <32} | {capacidad: >9} | {telefono: <11}  | {direccion} "
@@ -275,6 +290,45 @@ def print_tabla_reservaciones(reservaciones: List[Reservacion]):
     print(end="\n\n")
 
 
+def print_tabla_empleados(empleados: List[Empleado]):
+    """Imprime una tabla con los empleados"""
+
+    fmt = "| {id: <13} | {hotel_id: <13} | {ci: <10} | {nombre: <16} | {puesto: <24} | {salario: >7} | {fecha_contratacion: <12}"
+    print(
+        fmt.format(
+            id="ID",
+            hotel_id="Hotel ID",
+            ci="C.I.",
+            nombre="Nombre",
+            puesto="Puesto",
+            salario="Salario",
+            fecha_contratacion="F. Contrat.",
+        ),
+    )
+    print(
+        fmt.format(
+            id=":--:",
+            hotel_id=":--:",
+            ci=":--:",
+            nombre=":--:",
+            puesto=":--:",
+            salario=":--:",
+            fecha_contratacion=":--:",
+        ),
+    )
+    for e in empleados:
+        print(fmt.format(
+            id=e.id,
+            hotel_id=e.hotel_id,
+            ci=e.ci,
+            nombre=e.nombre,
+            puesto=e.puesto,
+            salario=e.salario,
+            fecha_contratacion=e.fecha_contratacion.strftime("%d/%m/%Y")
+            ))
+    print(end="\n\n")
+
+
 def print_tabla_mejores_clientes(clientes: List[MejorCliente]):
     """Imprime una tabla con los clientes"""
 
@@ -298,7 +352,7 @@ def print_tabla_mejores_clientes(clientes: List[MejorCliente]):
     print(end="\n\n")
 
 
-def leer_date(mensaje: str):
+def leer_date(mensaje: str, predeterminado=None):
     """Lee una fecha"""
     while True:
         try:

@@ -13,8 +13,8 @@ class Vista(IntEnum):
     HotelesListar = auto()
     RegistrarHotel = auto()
     HotelModificar = auto()
-    GestionarHotel = auto()
-    DejarDeGestionarHotel = auto()
+    SeleccionarHotel = auto()
+    DeseleccionarHotel = auto()
 
     # Gestionar un hotel
     HotelesHabitacionesListar = auto()
@@ -27,6 +27,12 @@ class Vista(IntEnum):
     ReservacionModificar = auto()
     ReservacionesListar = auto()
     OrdenarReservaciones = auto()
+
+    # Empleados
+    EmpleadoRegistrar = auto()
+    EmpleadoModificar = auto()
+    EmpleadoEliminar = auto()
+    EmpleadosListar = auto()
 
     ReservacionesReporteDelPeriodo = auto()
     ReservacionesReporteMejoresClientes = auto()
@@ -43,8 +49,8 @@ class Vista(IntEnum):
             Vista.RegistrarHotel: "Hoteles: Registrar",
             Vista.HotelModificar: "Hoteles: Modificar",
 
-            Vista.GestionarHotel: "Hoteles: Seleccionar",
-            Vista.DejarDeGestionarHotel: "Hoteles: Deseleccionar",
+            Vista.SeleccionarHotel: "Hoteles: Seleccionar",
+            Vista.DeseleccionarHotel: "Hoteles: Deseleccionar",
 
             Vista.HotelesHabitacionesListar: "Hoteles: Gestionar habitaciones",
             Vista.HotelesHabitacionesDisponibles: "Hoteles: Habitaciones disponibles",
@@ -54,6 +60,11 @@ class Vista(IntEnum):
             Vista.ReservacionModificar: "Reservaciones: Actualizar una reservación",
             Vista.ReservacionEliminar: "Reservaciones: Eliminar una reservación",
             Vista.ReservacionesListar: "Reservaciones: Listar",
+
+            Vista.EmpleadosListar: "Empleados: Listar",
+            Vista.EmpleadoRegistrar: "Empleados: Registrar",
+            Vista.EmpleadoModificar: "Empleados: Modificar",
+            Vista.EmpleadoEliminar: "Empleados: Eliminar",
 
             Vista.ReservacionesReporteDelPeriodo: "Reporte: reservaciones en período",
             Vista.ReservacionesReporteMejoresClientes: "Reporte: mejores clientes",
@@ -67,8 +78,8 @@ class Vista(IntEnum):
             # Vista.RegistrarHotel: vista_registrar_hotel,
             Vista.HotelModificar: vista_hotel_modificar,
 
-            Vista.GestionarHotel: vista_gestionar_hotel,
-            Vista.DejarDeGestionarHotel: vista_dejar_de_gestionar_hotel,
+            Vista.SeleccionarHotel: vista_seleccionar_hotel,
+            Vista.DeseleccionarHotel: vista_deseleccionar_hotel,
 
             Vista.HotelesHabitacionesListar: vista_hotel_habitaciones_listar,
             Vista.HotelesHabitacionesDisponibles: vista_hotel_habitaciones_disponibles,
@@ -79,6 +90,11 @@ class Vista(IntEnum):
             Vista.ReservacionEliminar: vista_reservacion_eliminar,
             Vista.ReservacionesListar: vista_reservaciones_listar,
             Vista.OrdenarReservaciones: vista_cambiar_orden_reservaciones,
+
+            Vista.EmpleadosListar: vista_empleados_listar,
+            Vista.EmpleadoRegistrar: vista_empleados_registrar,
+            Vista.EmpleadoModificar: vista_empleados_modificar,
+            Vista.EmpleadoEliminar: vista_empleados_eliminar,
 
             Vista.ReservacionesReporteDelPeriodo: vista_reservaciones_reporte_del_periodo,
             Vista.ReservacionesReporteMejoresClientes: vista_reservaciones_reporte_mejores_clientes,
@@ -91,13 +107,19 @@ class Vista(IntEnum):
         return [
             Vista.HotelesListar,
             # Vista.RegistrarHotel,
-            Vista.GestionarHotel,
-            Vista.HotelesHabitacionesListar,
-            Vista.HotelesHabitacionesDisponibles,
+            Vista.SeleccionarHotel,
+            # Vista.HotelesHabitacionesListar,
+            # Vista.HotelesHabitacionesDisponibles,
+
             Vista.Reservar,
             Vista.ReservacionesListar,
             Vista.ReservacionModificar,
             Vista.ReservacionEliminar,
+
+            Vista.EmpleadosListar,
+            Vista.EmpleadoRegistrar,
+            Vista.EmpleadoModificar,
+            Vista.EmpleadoEliminar,
             # Vista.ReservacionesReporteDelPeriodo,
             # Vista.ReservacionesReporteMejoresClientes,
             # Vista.ReservacionesReporteDuracion,
@@ -108,14 +130,20 @@ class Vista(IntEnum):
     def menu_para_hotel():
         """Retorna las vistas en el menú para el hotel"""
         return [
-            Vista.DejarDeGestionarHotel,
-            Vista.HotelesHabitacionesListar,
-            Vista.HotelesHabitacionesDisponibles,
-            Vista.HabitacionModificar,
+            Vista.DeseleccionarHotel,
+            # Vista.HotelesHabitacionesListar,
+            # Vista.HotelesHabitacionesDisponibles,
+            # Vista.HabitacionModificar,
+
             Vista.Reservar,
             Vista.ReservacionesListar,
             Vista.ReservacionModificar,
             Vista.ReservacionEliminar,
+
+            Vista.EmpleadosListar,
+            Vista.EmpleadoRegistrar,
+            Vista.EmpleadoModificar,
+            Vista.EmpleadoEliminar,
             # Vista.ReservacionesReporteDelPeriodo,
             # Vista.ReservacionesReporteMejoresClientes,
             # Vista.ReservacionesReporteDuracion,
@@ -145,7 +173,7 @@ def vista_menu(app: App, vista=None):
     return Vista(vista)
 
 
-def vista_gestionar_hotel(app: App, vista=None):
+def vista_seleccionar_hotel(app: App, vista=None):
     """Gestionar el hotel"""
     if app.hotelSeleccionado is None:
         app.hotelSeleccionado =  seleccionar_hotel(app.hoteles, "Seleccione un hotel")
@@ -153,7 +181,7 @@ def vista_gestionar_hotel(app: App, vista=None):
     return Vista.Menu
 
 
-def vista_dejar_de_gestionar_hotel(app: App, vista=None):
+def vista_deseleccionar_hotel(app: App, vista=None):
     """Deselecciona el hotel"""
     app.hotelSeleccionado = None
     print_info("Hotel deseleccionado")
@@ -520,6 +548,127 @@ def vista_reservaciones_listar(app: App, vista=None):
     )
 
     return vista or Vista.ReservacionesListar
+
+
+def vista_empleados_listar(app: App, vista=None):
+    """Muestra los empleados"""
+
+    empleados = None
+    if app.hotelSeleccionado is None:
+        print_seccion(app.cadenaHotelera + " - Empleados")
+        empleados = list(app.get_empleados())
+    else:
+        print_seccion(f"{app.cadenaHotelera } - Empleados de \"{app.hotelSeleccionado.nombre}\"")
+        empleados = list(app.get_empleados_de_hotel(app.hotelSeleccionado.id))
+
+    # print_debug("empleados", empleados)
+
+    opciones = [
+        ["Registrar nuevo", Vista.EmpleadoRegistrar],
+        ["Modificar uno", Vista.EmpleadoModificar],
+        ["Eliminar uno", Vista.EmpleadoEliminar],
+        ["Volver al menú", Vista.Menu],
+    ]
+
+    print_tabla_empleados(empleados)
+
+    vista = seleccionar_opcion(
+        "Seleccione una operación",
+        [o[0] for o in opciones],
+        [o[1] for o in opciones],
+    )
+
+    return vista or Vista.EmpleadosListar
+
+
+def vista_empleados_registrar(app: App, vista=None):
+    """Muestra la vista de registrar empleado"""
+
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles, "Seleccione un hotel")
+
+    print_seccion(app.cadenaHotelera + " - Registrar empleado en " + hotel.nombre)
+
+    ci = "{:0>8}".format(leer_int("Indique la C.I. del empleado"))
+
+    empleados_por_ci = app.get_empleados_por_ci()
+    if ci in empleados_por_ci:
+        print_error("Este empleado ya está registrado.")
+        print_info(empleados_por_ci[ci].nombre)
+        
+    else:
+        nombre = leer_str("¿Cuál es el nombre del empleado?")
+        puesto = leer_str("¿Cuál es el puesto del empleado?")
+        salario = leer_float("¿Cuál es el salario del empleado?")
+        fecha_contratacion = leer_date("¿Cuándo se contrato? (deje vacío para tomar el día de hoy)", datetime.datetime.now())
+
+        empleado = app.registrar_empleado(Empleado(
+            hotel.id,
+            ci,
+            nombre,
+            puesto,
+            salario,
+            fecha_contratacion
+        ))
+
+        print_info("Empleado registrado:")
+        print(empleado)
+
+    # if app.hotelSeleccionado is None:
+        # return Vista.Menu
+
+    return Vista.EmpleadosListar
+
+
+def vista_empleados_modificar(app: App, vista=None):
+    """Muestra la vista de modificar un empleado"""
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles, "Seleccione un hotel")
+
+    empleado = seleccionar_empleado(app.get_empleados_de_hotel(hotel.id))
+
+    original_nombre = empleado.nombre
+    original_ci = empleado.ci
+    original_puesto = empleado.puesto
+    original_salario = empleado.salario
+
+    print_info("Datos del empleado (no puede modificar el id):")
+    print_tabla_empleados([empleado])
+
+    empleado.nombre = leer_str(f"Indique el nuevo nombre (deje en blanco para no modificar):", predeterminado=empleado.nombre)
+    empleado.ci = "{:0>8}".format(leer_int(f"Indique la nueva C.I. (deje en blanco para no modificar):", predeterminado=empleado.ci))
+    empleado.puesto = leer_str(f"Indique el nuevo puesto (deje en blanco para no modificar):", predeterminado=empleado.puesto)
+    empleado.salario = leer_float(f"Indique el nuevo salario (deje en blanco para no modificar):", predeterminado=empleado.salario)
+
+    if empleado.nombre != original_nombre or empleado.ci != original_ci or empleado.puesto != original_puesto or empleado.salario != original_salario:
+        print_tabla_empleados([empleado])
+        print_info("Empleado modificado")
+        app.registrar_actividad("Empleado modificado", data={"id": empleado.id, "nombre": empleado.nombre, "ci": empleado.ci, "puesto": empleado.puesto, "salario": empleado.salario})
+
+    if app.hotelSeleccionado is None:
+        return Vista.EmpleadosListar
+
+    return Vista.Menu
+
+
+def vista_empleados_eliminar(app: App, vista=None):
+    """Muestra la vista de eliminar un Empleado"""
+
+    hotel = app.hotelSeleccionado or seleccionar_hotel(app.hoteles)
+
+    print_seccion(app.cadenaHotelera + " - Eliminar Empleado en " + hotel.nombre)
+
+    empleado = seleccionar_empleado(app.get_empleados_de_hotel(hotel.id))
+    print_info("Empleado seleccionado:")
+    print(empleado)
+
+    if leer_si_no("¿Desea eliminar a este empleado del sistema?"):
+        app.eliminar_empleado(empleado)
+        print_info("Empleado eliminado")
+
+    return Vista.Menu
+
+##
+# Reportes
+##
 
 def vista_reservaciones_reporte_del_periodo(app: App, vista=None):
     """Muestra el reporte del período"""

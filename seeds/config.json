@@ -3,5 +3,8 @@
     "archivo_hoteles": "./data/hoteles.json",
     "archivo_reservaciones": "./data/reservaciones.csv",
     "archivo_clientes": "./data/clientes.csv",
-    "archivo_actividades": "./data/actividades.csv"
+    "archivo_actividades": "./data/actividades.csv",
+    "archivo_empleados": "./data/empleados.csv",
+    "archivo_facturas": "./data/facturas.csv",
+    "archivo_pagos": "./data/pagos.csv"
 }
